@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "start": "next start",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "next lint"
   },
+  
   "dependencies": {
     "@clerk/nextjs": "^4.23.2",
     "@emoji-mart/data": "^1.1.2",
