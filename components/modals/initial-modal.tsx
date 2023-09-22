@@ -36,6 +36,8 @@ const formSchema = z.object({
   })
 });
 
+// ... previous imports and code ...
+
 export const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -79,7 +81,7 @@ export const InitialModal = () => {
             Customize your server
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
-            Give your "SABHA" a personality with a name and an image. You can always change it later.
+            Give your &ldquo;SABHA&rdquo; a personality with a name and an image. You can always change it later.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
