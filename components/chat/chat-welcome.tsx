@@ -1,5 +1,7 @@
+import Image from "next/image";
 import { CircleEllipsis } from "lucide-react";
-import Image from "./swagatam.png"
+
+import swagatamImage from "./swagatam.png";
 
 interface ChatWelcomeProps {
   name: string;
@@ -14,7 +16,12 @@ export const ChatWelcome = ({
     <div className="space-y-2 px-4 mb-4">
       {type === "channel" && (
         <div className="h-[75px] w-[75px] rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
-          <img src="swagatam.png" alt="" />
+          <Image
+            src={swagatamImage}
+            alt="Welcome illustration"
+            className="h-10 w-10 object-contain"
+            priority
+          />
           <CircleEllipsis className="h-12 w-12 text-[#476ee2]" />
         </div>
       )}
