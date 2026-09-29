@@ -26,6 +26,21 @@ export async function GET(
       return new NextResponse("Conversation ID missing", { status: 400 });
     }
 
+    const conversation = await db.conversation.findFirst({
+      where: {
+        id: conversationId,
+        OR: [
+          { memberOne: { profileId: profile.id } },
+          { memberTwo: { profileId: profile.id } },
+        ]
+      },
+      select: { id: true }
+    });
+
+    if (!conversation) {
+      return new NextResponse("Conversation not found", { status: 404 });
+    }
+
     let messages: DirectMessage[] = [];
 
     if (cursor) {

@@ -107,7 +107,11 @@ export const ChatItem = ({
       form.reset();
       setIsEditing(false);
     } catch (error) {
-      console.log(error);
+      form.setError("root", {
+        message: axios.isAxiosError(error)
+          ? error.response?.data || "Your message could not be updated."
+          : "Your message could not be updated.",
+      });
     }
   }
 
@@ -143,7 +147,7 @@ export const ChatItem = ({
                 {roleIconMap[member.role]}
               </ActionTooltip>
             </div>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs text-muted-foreground">
               {timestamp}
             </span>
           </div>
@@ -215,7 +219,12 @@ export const ChatItem = ({
                     Save
                   </Button>
               </form>
-              <span className="text-[10px] mt-1 text-zinc-400">
+              {form.formState.errors.root?.message && (
+                <p role="alert" className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+              <span className="mt-1 text-[10px] text-muted-foreground">
                 Press escape to cancel, enter to save
               </span>
             </Form>
@@ -226,20 +235,28 @@ export const ChatItem = ({
         <div className="hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 bg-white dark:bg-zinc-800 border rounded-sm">
           {canEditMessage && (
             <ActionTooltip label="Edit">
-              <Edit
+              <button
+                type="button"
+                aria-label="Edit message"
                 onClick={() => setIsEditing(true)}
-                className="cursor-pointer ml-auto w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
-              />
+                className="rounded-sm p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
             </ActionTooltip>
           )}
           <ActionTooltip label="Delete">
-            <Trash
-              onClick={() => onOpen("deleteMessage", { 
+            <button
+              type="button"
+              aria-label="Delete message"
+              onClick={() => onOpen("deleteMessage", {
                 apiUrl: `${socketUrl}/${id}`,
                 query: socketQuery,
-               })}
-              className="cursor-pointer ml-auto w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
-            />
+              })}
+              className="rounded-sm p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            >
+              <Trash className="h-4 w-4" />
+            </button>
           </ActionTooltip>
         </div>
       )}

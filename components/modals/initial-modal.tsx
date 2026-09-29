@@ -59,13 +59,16 @@ export const InitialModal = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.post("/api/servers", values);
+      const response = await axios.post("/api/servers", values);
 
       form.reset();
-      router.refresh();
-      window.location.reload();
+      router.push(`/servers/${response.data.id}`);
     } catch (error) {
-      console.log(error);
+      const message = axios.isAxiosError(error)
+        ? error.response?.data || "We couldn't create your Sabha. Please try again."
+        : "We couldn't create your Sabha. Please try again.";
+
+      form.setError("root", { message });
     }
   }
 
@@ -75,18 +78,18 @@ export const InitialModal = () => {
 
   return (
     <Dialog open>
-      <DialogContent className="bg-white text-black p-0 overflow-hidden">
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">
-            Customize your server
+      <DialogContent className="overflow-hidden border-border bg-background p-0 text-foreground sm:max-w-md">
+        <DialogHeader className="border-b border-border bg-card px-6 pb-6 pt-8">
+          <DialogTitle className="text-center text-2xl font-bold tracking-tight">
+            Start your first Sabha
           </DialogTitle>
-          <DialogDescription className="text-center text-zinc-500">
-            Give your &ldquo;SABHA&rdquo; a personality with a name and an image. You can always change it later.
+          <DialogDescription className="text-center text-muted-foreground">
+            Create a focused space for your team, community, or next big idea.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-8 px-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-6 px-6 pt-2">
               <div className="flex items-center justify-center text-center">
                 <FormField
                   control={form.control}
@@ -98,6 +101,9 @@ export const InitialModal = () => {
                           endpoint="serverImage"
                           value={field.value}
                           onChange={field.onChange}
+                          onUploadError={(error) =>
+                            form.setError("imageUrl", { message: error.message })
+                          }
                         />
                       </FormControl>
                     </FormItem>
@@ -111,15 +117,15 @@ export const InitialModal = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel
-                      className="uppercase text-xs font-bold text-zinc-500 dark:text-secondary/70"
+                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                     >
-                      Sabha name
+                      Name your Sabha
                     </FormLabel>
                     <FormControl>
                       <Input
                         disabled={isLoading}
-                        className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
-                        placeholder="Enter server name"
+                        className="h-11 border-border bg-background focus-visible:ring-indigo-500"
+                        placeholder="e.g. Product Builders"
                         {...field}
                       />
                     </FormControl>
@@ -127,10 +133,16 @@ export const InitialModal = () => {
                   </FormItem>
                 )}
               />
+
+              {form.formState.errors.root?.message && (
+                <p role="alert" className="text-sm text-destructive">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
             </div>
-            <DialogFooter className="bg-gray-100 px-6 py-4">
-              <Button variant="primary" disabled={isLoading}>
-                Create
+            <DialogFooter className="border-t border-border bg-muted/30 px-6 py-4">
+              <Button className="w-full sm:w-auto" variant="primary" disabled={isLoading}>
+                {isLoading ? "Creating Sabha..." : "Create Sabha"}
               </Button>
             </DialogFooter>
           </form>

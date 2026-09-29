@@ -3,6 +3,7 @@ import { NextApiRequest } from "next";
 import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
+import { createMessageSchema } from "@/lib/message-schema";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,7 +15,7 @@ export default async function handler(
 
   try {
     const profile = await currentProfilePages(req);
-    const { content, fileUrl } = req.body;
+    const result = createMessageSchema.safeParse(req.body);
     const { serverId, channelId } = req.query;
     
     if (!profile) {
@@ -29,8 +30,8 @@ export default async function handler(
       return res.status(400).json({ error: "Channel ID missing" });
     }
           
-    if (!content) {
-      return res.status(400).json({ error: "Content missing" });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid message" });
     }
 
     const server = await db.server.findFirst({
@@ -70,8 +71,8 @@ export default async function handler(
 
     const message = await db.message.create({
       data: {
-        content,
-        fileUrl,
+        content: result.data.content,
+        fileUrl: result.data.fileUrl,
         channelId: channelId as string,
         memberId: member.id,
       },
@@ -86,7 +87,7 @@ export default async function handler(
 
     const channelKey = `chat:${channelId}:messages`;
 
-    res?.socket?.server?.io?.emit(channelKey, message);
+    res?.socket?.server?.io?.to(channelKey).emit(channelKey, message);
 
     return res.status(200).json(message);
   } catch (error) {

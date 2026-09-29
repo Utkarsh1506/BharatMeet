@@ -8,6 +8,7 @@ type ChatSocketProps = {
   addKey: string;
   updateKey: string;
   queryKey: string;
+  type: "channel" | "conversation";
 }
 
 type MessageWithMemberWithProfile = Message & {
@@ -19,7 +20,8 @@ type MessageWithMemberWithProfile = Message & {
 export const useChatSocket = ({
   addKey,
   updateKey,
-  queryKey
+  queryKey,
+  type,
 }: ChatSocketProps) => {
   const { socket } = useSocket();
   const queryClient = useQueryClient();
@@ -28,6 +30,10 @@ export const useChatSocket = ({
     if (!socket) {
       return;
     }
+
+    const chatId = queryKey.replace("chat:", "");
+
+    socket.emit("join-chat", { chatId, type });
 
     socket.on(updateKey, (message: MessageWithMemberWithProfile) => {
       queryClient.setQueryData([queryKey], (oldData: any) => {
@@ -82,6 +88,7 @@ export const useChatSocket = ({
     });
 
     return () => {
+      socket.emit("leave-chat", { chatId });
       socket.off(addKey);
       socket.off(updateKey);
     }

@@ -5,7 +5,7 @@ import axios from "axios";
 import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -26,7 +26,7 @@ interface ChatInputProps {
 }
 
 const formSchema = z.object({
-  content: z.string().min(1),
+  content: z.string().trim().min(1, "Write a message before sending."),
 });
 
 export const ChatInput = ({
@@ -59,7 +59,11 @@ export const ChatInput = ({
       form.reset();
       router.refresh();
     } catch (error) {
-      console.log(error);
+      form.setError("root", {
+        message: axios.isAxiosError(error)
+          ? error.response?.data || "Your message could not be sent. Try again."
+          : "Your message could not be sent. Try again.",
+      });
     }
   }
 
@@ -76,13 +80,14 @@ export const ChatInput = ({
                   <button
                     type="button"
                     onClick={() => onOpen("messageFile", { apiUrl, query })}
-                    className="absolute top-7 left-8 h-[24px] w-[24px] bg-white dark:bg-white hover:bg-zinc-600 dark:hover:bg-zinc-300 transition rounded-full p-1 flex items-center justify-center"
+                    aria-label="Attach a file"
+                    className="absolute left-8 top-7 flex h-6 w-6 items-center justify-center rounded-full bg-background p-1 text-primary transition hover:bg-primary hover:text-primary-foreground"
                   >
-                    <Plus className="text-[#476ee2] dark:text-[#476ee2]" />
+                    <Plus className="h-4 w-4" />
                   </button>
                   <Input
                     disabled={isLoading}
-                    className="px-14 py-6 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200"
+                    className="border-border bg-muted/80 px-14 py-6 text-foreground focus-visible:ring-primary"
                     placeholder={`Message ${type === "conversation" ? name : "🔥" + name}`}
                     {...field}
                   />
@@ -92,6 +97,14 @@ export const ChatInput = ({
                     />
                   </div>
                 </div>
+                {form.formState.errors.root?.message && (
+                  <p role="alert" className="px-1 text-xs text-destructive">
+                    {form.formState.errors.root.message}
+                  </p>
+                )}
+                {isLoading && (
+                  <Loader2 className="absolute right-14 top-7 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
               </FormControl>
             </FormItem>
           )}

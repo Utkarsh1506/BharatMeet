@@ -9,12 +9,14 @@ import "@uploadthing/react/styles.css";
 
 interface FileUploadProps {
   onChange: (url?: string) => void;
+  onUploadError?: (error: Error) => void;
   value: string;
   endpoint: "messageFile" | "serverImage"
 }
 
 export const FileUpload = ({
   onChange,
+  onUploadError,
   value,
   endpoint
 }: FileUploadProps) => {
@@ -70,7 +72,7 @@ export const FileUpload = ({
         onChange(res?.[0].url);
       }}
       onUploadError={(error: Error) => {
-        console.log(error);
+        onUploadError?.(error);
       }}
     />
   )

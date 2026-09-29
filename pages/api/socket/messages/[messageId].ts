@@ -4,6 +4,7 @@ import { MemberRole } from "@prisma/client";
 import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
+import { updateMessageSchema } from "@/lib/message-schema";
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,7 +17,6 @@ export default async function handler(
   try {
     const profile = await currentProfilePages(req);
     const { messageId, serverId, channelId } = req.query;
-    const { content } = req.body;
 
     if (!profile) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -117,12 +117,18 @@ export default async function handler(
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const result = updateMessageSchema.safeParse(req.body);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid message" });
+      }
+
       message = await db.message.update({
         where: {
           id: messageId as string,
         },
         data: {
-          content,
+          content: result.data.content,
         },
         include: {
           member: {
@@ -136,7 +142,7 @@ export default async function handler(
 
     const updateKey = `chat:${channelId}:messages:update`;
 
-    res?.socket?.server?.io?.emit(updateKey, message);
+    res?.socket?.server?.io?.to(`chat:${channelId}:messages`).emit(updateKey, message);
 
     return res.status(200).json(message);
   } catch (error) {

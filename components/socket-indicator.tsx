@@ -2,6 +2,7 @@
 
 import { useSocket } from "@/components/providers/socket-provider";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export const SocketIndicator = () => {
   const { isConnected } = useSocket();
@@ -10,9 +11,11 @@ export const SocketIndicator = () => {
     return (
       <Badge 
         variant="outline" 
-        className="bg-yellow-600 text-white border-none"
+        title="Realtime connection unavailable. Polling for updates."
+        className="gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
       >
-        Fallback: Polling every 1s
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        Offline
       </Badge>
     )
   }
@@ -20,9 +23,11 @@ export const SocketIndicator = () => {
   return (
     <Badge 
       variant="outline" 
-      className="bg-emerald-600 text-white border-none"
+      title="Realtime updates are active."
+      className={cn("gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400")}
     >
-      Active: Real-time updates
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Live
     </Badge>
   )
 }
