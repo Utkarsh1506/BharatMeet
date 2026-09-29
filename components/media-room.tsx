@@ -33,7 +33,12 @@ export const MediaRoom = ({
 
     (async () => {
       try {
-        const resp = await fetch(`/api/livekit?room=${chatId}&username=${name}`);
+        const params = new URLSearchParams({
+          room: chatId,
+          username: user.id,
+          name,
+        });
+        const resp = await fetch(`/api/livekit?${params.toString()}`);
         const data = await resp.json();
 
         if (!resp.ok) {
@@ -89,14 +94,17 @@ export const MediaRoom = ({
 
   return (
     <LiveKitRoom
+      className="flex h-full min-h-0 w-full flex-1 flex-col"
       data-lk-theme="default"
       serverUrl={serverUrl}
       token={token}
       connect={true}
       video={video}
       audio={audio}
+      onError={(roomError) => setError(roomError.message)}
+      onDisconnected={() => setError("LiveKit disconnected from the meeting server")}
     >
-      <VideoConference />
+      <VideoConference className="h-full" />
     </LiveKitRoom>
   )
 }

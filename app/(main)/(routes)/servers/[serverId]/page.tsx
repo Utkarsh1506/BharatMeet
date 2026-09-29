@@ -30,23 +30,25 @@ const ServerIdPage = async ({
     },
     include: {
       channels: {
-        where: {
-          name: "Apni Sabha"
-        },
         orderBy: {
           createdAt: "asc"
-        }
+        },
+        take: 1,
       }
     }
   })
 
-  const initialChannel = server?.channels[0];
-
-  if (initialChannel?.name !== "Apni Sabha") {
-    return null;
+  if (!server) {
+    return redirect("/");
   }
 
-  return redirect(`/servers/${params.serverId}/channels/${initialChannel?.id}`)
+  const initialChannel = server?.channels[0];
+
+  if (!initialChannel) {
+    return redirect(`/servers/${params.serverId}`);
+  }
+
+  return redirect(`/servers/${params.serverId}/channels/${initialChannel.id}`)
 }
  
 export default ServerIdPage;
