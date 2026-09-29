@@ -24,7 +24,7 @@ export const ActionTooltip = ({
     <TooltipProvider>
       <Tooltip delayDuration={50}>
         <TooltipTrigger asChild>
-          {children}
+          <span className="inline-flex">{children}</span>
         </TooltipTrigger>
         <TooltipContent side={side} align={align}>
           <p className="font-semibold text-sm capitalize">

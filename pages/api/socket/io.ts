@@ -31,7 +31,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           return next(new Error("Unauthorized"));
         }
 
-        const payload = await verifyToken(token, { secretKey });
+        const payload = await verifyToken(token, { secretKey, issuer: null });
         socket.data.userId = payload.sub;
         next();
       } catch (error) {

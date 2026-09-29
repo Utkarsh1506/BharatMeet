@@ -96,15 +96,15 @@ export const ChatInput = ({
                       onChange={(emoji: string) => field.onChange(`${field.value} ${emoji}`)}
                     />
                   </div>
+                  {form.formState.errors.root?.message && (
+                    <p role="alert" className="px-1 text-xs text-destructive">
+                      {form.formState.errors.root.message}
+                    </p>
+                  )}
+                  {isLoading && (
+                    <Loader2 className="absolute right-14 top-7 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
                 </div>
-                {form.formState.errors.root?.message && (
-                  <p role="alert" className="px-1 text-xs text-destructive">
-                    {form.formState.errors.root.message}
-                  </p>
-                )}
-                {isLoading && (
-                  <Loader2 className="absolute right-14 top-7 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
               </FormControl>
             </FormItem>
           )}
