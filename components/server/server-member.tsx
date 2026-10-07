@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
+import { useSocket } from "@/components/providers/socket-provider";
 
 interface ServerMemberProps {
   member: Member & { profile: Profile };
@@ -24,8 +25,11 @@ export const ServerMember = ({
 }: ServerMemberProps) => {
   const params = useParams();
   const router = useRouter();
+  const { presenceByUserId } = useSocket();
 
   const icon = roleIconMap[member.role];
+  const presenceStatus = presenceByUserId[member.profile.userId] || "offline";
+  const isOnline = presenceStatus !== "offline";
 
   const onClick = () => {
     router.push(`/servers/${params?.serverId}/conversations/${member.id}`)
@@ -35,18 +39,30 @@ export const ServerMember = ({
     <button
       onClick={onClick}
       className={cn(
-        "group px-2 py-2 rounded-md flex items-center gap-x-2 w-full hover:bg-zinc-700/10 dark:hover:bg-zinc-700/50 transition mb-1",
-        params?.memberId === member.id && "bg-zinc-700/20 dark:bg-zinc-700"
+        "group mb-1 flex w-full items-center gap-x-2 rounded-lg px-2 py-2 transition-colors hover:bg-white/5",
+        params?.memberId === member.id && "bg-active text-white"
       )}
     >
-      <UserAvatar 
-        src={member.profile.imageUrl}
-        className="h-8 w-8 md:h-8 md:w-8"
-      />
+      <div className="relative shrink-0">
+        <UserAvatar
+          src={member.profile.imageUrl}
+          className="h-8 w-8 md:h-8 md:w-8"
+        />
+        <span
+          aria-label={isOnline ? "Online" : "Offline"}
+          className={cn(
+            "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-panel",
+            presenceStatus === "online" && "bg-emerald-400",
+            presenceStatus === "away" && "bg-amber-400",
+            presenceStatus === "dnd" && "bg-rose-400",
+            presenceStatus === "offline" && "bg-zinc-500",
+          )}
+        />
+      </div>
       <p
         className={cn(
-          "font-semibold text-sm text-zinc-500 group-hover:text-zinc-600 dark:text-zinc-400 dark:group-hover:text-zinc-300 transition",
-          params?.memberId === member.id && "text-primary dark:text-zinc-200 dark:group-hover:text-white"
+          "text-sm font-medium transition-colors",
+          params?.memberId === member.id ? "text-white" : "text-zinc-300 group-hover:text-white"
         )}
       >
         {member.profile.name}

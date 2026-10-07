@@ -26,10 +26,12 @@ export const ActionTooltip = ({
         <TooltipTrigger asChild>
           <span className="inline-flex">{children}</span>
         </TooltipTrigger>
-        <TooltipContent side={side} align={align}>
-          <p className="font-semibold text-sm capitalize">
-            {label.toLowerCase()}
-          </p>
+        <TooltipContent
+          side={side}
+          align={align}
+          className="border border-white/10 bg-surface px-2.5 py-1.5 text-xs font-medium text-zinc-200"
+        >
+          <p>{label}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

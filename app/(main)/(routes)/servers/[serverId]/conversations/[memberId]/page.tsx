@@ -43,23 +43,34 @@ const MemberIdPage = async ({
     return redirect("/");
   }
 
+  const otherMember = await db.member.findFirst({
+    where: {
+      id: params.memberId,
+      serverId: params.serverId,
+    },
+    include: {
+      profile: true,
+    },
+  });
+
+  if (!otherMember || otherMember.id === currentMember.id) {
+    return redirect(`/servers/${params.serverId}`);
+  }
+
   const conversation = await getOrCreateConversation(currentMember.id, params.memberId);
 
   if (!conversation) {
     return redirect(`/servers/${params.serverId}`);
   }
 
-  const { memberOne, memberTwo } = conversation;
-
-  const otherMember = memberOne.profileId === profile.id ? memberTwo : memberOne;
-
   return ( 
-    <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
+    <div className="bg-white dark:bg-surface-hover flex flex-col h-full">
       <ChatHeader
         imageUrl={otherMember.profile.imageUrl}
         name={otherMember.profile.name}
         serverId={params.serverId}
         type="conversation"
+        profileId={otherMember.profile.id}
       />
       {searchParams.video && (
         <MediaRoom

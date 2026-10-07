@@ -44,12 +44,12 @@ export default async function handler(
       include: {
         memberOne: {
           include: {
-            profile: true,
+            profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
           }
         },
         memberTwo: {
           include: {
-            profile: true,
+            profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
           }
         }
       }
@@ -73,7 +73,7 @@ export default async function handler(
       include: {
         member: {
           include: {
-            profile: true,
+            profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
           }
         }
       }
@@ -102,7 +102,7 @@ export default async function handler(
         include: {
           member: {
             include: {
-              profile: true,
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
             }
           }
         }
@@ -126,7 +126,7 @@ export default async function handler(
         include: {
           member: {
             include: {
-              profile: true,
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
             }
           }
         }

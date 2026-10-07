@@ -11,16 +11,18 @@ datasource db {
 }
 
 model Profile {
-  id        String    @id @default(uuid())
-  userId    String    @unique
-  name      String
-  imageUrl  String    @db.Text
-  email     String    @db.Text
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  servers   Server[]
-  members   Member[]
-  channels  Channel[]
+  id            String        @id @default(uuid())
+  userId        String        @unique
+  name          String
+  imageUrl      String        @db.Text
+  email         String        @db.Text
+  presenceStatus String       @default("online")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  servers       Server[]
+  members       Member[]
+  channels      Channel[]
+  notifications Notification[]
 }
 
 model Server {
@@ -48,12 +50,16 @@ model Member {
   profile                Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
   server                 Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages               Message[]
+  messageReactions       MessageReaction[]
+  directMessageReactions DirectMessageReaction[]
   directMessages         DirectMessage[]
   conversationsInitiated Conversation[]  @relation("MemberOne")
   conversationsReceived  Conversation[]  @relation("MemberTwo")
 
   @@index([profileId])
   @@index([serverId])
+  @@index([serverId, role])
+  @@index([profileId, serverId])
 }
 
 model Channel {
@@ -73,19 +79,52 @@ model Channel {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  fileUrl   String?  @db.Text
+  id        String          @id @default(uuid())
+  content   String          @db.Text
+  fileUrl   String?         @db.Text
   memberId  String
   channelId String
-  deleted   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  deleted   Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  member    Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel   Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
 
   @@index([channelId])
   @@index([memberId])
+  @@index([channelId, createdAt(sort: Desc)])
+  @@index([channelId, deleted, createdAt(sort: Desc)])
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  memberId  String
+  messageId String
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, memberId, emoji])
+  @@index([messageId])
+  @@index([memberId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  profileId String
+  title     String
+  content   String   @db.Text
+  link      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, read])
+  @@index([profileId, createdAt(sort: Desc)])
+  @@index([profileId, read, createdAt(sort: Desc)])
 }
 
 model Conversation {
@@ -111,9 +150,26 @@ model DirectMessage {
   updatedAt      DateTime     @updatedAt
   member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  reactions      DirectMessageReaction[]
 
   @@index([memberId])
   @@index([conversationId])
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([conversationId, deleted, createdAt(sort: Desc)])
+}
+
+model DirectMessageReaction {
+  id              String        @id @default(uuid())
+  emoji           String
+  memberId        String
+  directMessageId String
+  createdAt       DateTime      @default(now())
+  member          Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  directMessage   DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+
+  @@unique([directMessageId, memberId, emoji])
+  @@index([directMessageId])
+  @@index([memberId])
 }
 
 enum MemberRole {

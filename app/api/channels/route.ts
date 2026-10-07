@@ -5,24 +5,46 @@ import { z } from "zod";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+import { sanitizeName } from "@/lib/sanitize";
+import { apiLogger } from "@/lib/logger";
 
 const channelSchema = z.object({
-  name: z.string().trim().min(1, "Channel name is required.").max(80),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Channel name is required.")
+    .max(80)
+    .transform((val) => sanitizeName(val)),
   type: z.nativeEnum(ChannelType),
 });
 
 export async function POST(
   req: Request
 ) {
+  let serverId: string | null = null;
+
   try {
     const profile = await currentProfile();
     const body = await req.json();
     const { searchParams } = new URL(req.url);
 
-    const serverId = searchParams.get("serverId");
+    serverId = searchParams.get("serverId");
 
     if (!profile) {
       return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Apply rate limiting
+    const rateLimitResult = await checkRateLimit(apiLimiter, profile.id);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      );
     }
 
     if (!serverId) {
@@ -66,7 +88,7 @@ export async function POST(
 
     return NextResponse.json(server);
   } catch (error) {
-    console.log("CHANNELS_POST", error);
+    apiLogger.error({ error, serverId }, "Failed to create channel");
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

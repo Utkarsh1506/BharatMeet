@@ -13,15 +13,16 @@ export const NavigationAction = () => {
       <ActionTooltip
         side="right"
         align="center"
-        label="Add a SABHA"
+        label="Create Sabha"
       >
         <button
           onClick={() => onOpen("createServer")}
-          className="group flex items-center"
+          className="group flex items-center focus-visible:outline-none"
+          aria-label="Create Sabha"
         >
-          <div className="flex mx-3 h-[48px] w-[48px] rounded-[24px] group-hover:rounded-[16px] transition-all overflow-hidden items-center justify-center bg-background dark:bg-neutral-700 group-hover:bg-emerald-500">
+          <div className="mx-3 flex h-[48px] w-[48px] items-center justify-center overflow-hidden rounded-[20px] border border-white/5 bg-surface transition-all duration-200 group-hover:rounded-[16px] group-hover:bg-emerald-500/90 group-focus-visible:ring-2 group-focus-visible:ring-emerald-500 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-sidebar">
             <Plus
-              className="group-hover:text-white transition text-emerald-500"
+              className="text-emerald-400 transition group-hover:text-white"
               size={25}
             />
           </div>

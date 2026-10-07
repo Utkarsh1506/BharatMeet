@@ -1,16 +1,39 @@
 import { currentUser } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+
 import { db } from "@/lib/db";
-import { redirect } from "next/navigation"; // Use Next.js's redirect for server-side
+
+const buildProfileName = (user: Awaited<ReturnType<typeof currentUser>>) => {
+  const firstName = user?.firstName?.trim();
+  const lastName = user?.lastName?.trim();
+  const username = user?.username?.trim();
+
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  }
+
+  if (firstName) {
+    return firstName;
+  }
+
+  if (lastName) {
+    return lastName;
+  }
+
+  if (username) {
+    return username;
+  }
+
+  return "New User";
+};
 
 export const initialProfile = async () => {
   const user = await currentUser();
 
   if (!user) {
-    // Redirect to the sign-in page using Next.js's redirect
     return redirect("/sign-in");
   }
 
-  // Check if the profile already exists
   const profile = await db.profile.findUnique({
     where: {
       userId: user.id,
@@ -21,13 +44,12 @@ export const initialProfile = async () => {
     return profile;
   }
 
-  // Create a new profile if it doesn't exist
   const newProfile = await db.profile.create({
     data: {
       userId: user.id,
-      name: `${user.firstName} ${user.lastName}`,
+      name: buildProfileName(user),
       imageUrl: user.imageUrl,
-      email: user.emailAddresses[0].emailAddress,
+      email: user.emailAddresses[0]?.emailAddress ?? `${user.id}@local.user`,
     },
   });
 

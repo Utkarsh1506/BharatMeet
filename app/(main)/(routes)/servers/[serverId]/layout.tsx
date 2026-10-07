@@ -33,13 +33,13 @@ const ServerIdLayout = async ({
     return redirect("/");
   }
 
-  return ( 
-    <div className="h-full">
-      <div 
-      className="hidden md:flex h-full w-60 z-20 flex-col fixed inset-y-0">
+  return (
+    <div className="flex h-full min-w-0">
+      {/* Server sidebar - hidden on mobile/tablet (< 1024px), visible on lg and up */}
+      <div className="hidden lg:flex h-full w-[260px] shrink-0 flex-col overflow-hidden bg-panel">
         <ServerSidebar serverId={params.serverId} />
       </div>
-      <main className="h-full md:pl-60">
+      <main className="h-full min-w-0 flex-1">
         {children}
       </main>
     </div>

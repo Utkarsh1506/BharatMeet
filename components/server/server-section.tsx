@@ -26,14 +26,16 @@ export const ServerSection = ({
 
   return (
     <div className="flex items-center justify-between py-2">
-      <p className="text-xs uppercase font-semibold text-zinc-500 dark:text-zinc-400">
+      <p className="section-kicker">
         {label}
       </p>
       {role !== MemberRole.GUEST && sectionType === "channels" && (
         <ActionTooltip label="Create Meeting" side="top">
           <button
+            type="button"
+            aria-label="Create meeting"
             onClick={() => onOpen("createChannel", { channelType })}
-            className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
+            className="text-zinc-400 transition hover:text-zinc-200"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -42,8 +44,10 @@ export const ServerSection = ({
       {role === MemberRole.ADMIN && sectionType === "members" && (
         <ActionTooltip label="Manage Sadasya" side="top">
           <button
+            type="button"
+            aria-label="Manage members"
             onClick={() => onOpen("members", { server })}
-            className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
+            className="text-zinc-400 transition hover:text-zinc-200"
           >
             <Settings className="h-4 w-4" />
           </button>

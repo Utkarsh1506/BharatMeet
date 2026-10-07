@@ -5,8 +5,10 @@ import axios from "axios";
 import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, SendHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 import {
   Form,
@@ -17,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useModal } from "@/hooks/use-modal-store";
 import { EmojiPicker } from "@/components/emoji-picker";
+import { useSocket } from "@/components/providers/socket-provider";
 
 interface ChatInputProps {
   apiUrl: string;
@@ -36,7 +39,48 @@ export const ChatInput = ({
   type,
 }: ChatInputProps) => {
   const { onOpen } = useModal();
+  const { socket } = useSocket();
+  const { userId } = useAuth();
   const router = useRouter();
+  const typingTimeout = useRef<number | null>(null);
+
+  const chatId = query.channelId || query.conversationId;
+  const draftKey = `bharatmeet:draft:${userId || "anonymous"}:${type}:${chatId}`;
+
+  const stopTyping = () => {
+    if (typingTimeout.current) {
+      window.clearTimeout(typingTimeout.current);
+      typingTimeout.current = null;
+    }
+
+    if (socket && chatId) {
+      socket.emit("typing", { chatId, isTyping: false });
+    }
+  };
+
+  const startTyping = () => {
+    if (!socket || !chatId) {
+      return;
+    }
+
+    socket.emit("typing", { chatId, isTyping: true });
+    if (typingTimeout.current) {
+      window.clearTimeout(typingTimeout.current);
+    }
+    typingTimeout.current = window.setTimeout(stopTyping, 1200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeout.current) {
+        window.clearTimeout(typingTimeout.current);
+      }
+
+      if (socket && chatId) {
+        socket.emit("typing", { chatId, isTyping: false });
+      }
+    };
+  }, [chatId, socket]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,6 +91,26 @@ export const ChatInput = ({
 
   const isLoading = form.formState.isSubmitting;
 
+  useEffect(() => {
+    const savedDraft = window.localStorage.getItem(draftKey);
+
+    if (savedDraft) {
+      form.setValue("content", savedDraft);
+    }
+
+    const subscription = form.watch((values) => {
+      const content = values.content?.trim();
+
+      if (content) {
+        window.localStorage.setItem(draftKey, values.content || "");
+      } else {
+        window.localStorage.removeItem(draftKey);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [draftKey, form]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const url = qs.stringifyUrl({
@@ -56,7 +120,9 @@ export const ChatInput = ({
 
       await axios.post(url, values);
 
+      stopTyping();
       form.reset();
+      window.localStorage.removeItem(draftKey);
       router.refresh();
     } catch (error) {
       form.setError("root", {
@@ -69,40 +135,64 @@ export const ChatInput = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="px-3 pb-4 pt-2 sm:px-4">
+        <div className="section-kicker mb-2 flex items-center gap-2 px-1">
+          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          <span>{type === "conversation" ? "Direct message" : `Message #${name}`}</span>
+        </div>
         <FormField
           control={form.control}
           name="content"
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <div className="relative p-4 pb-6">
+                <div className="relative border-y border-white/15 bg-surface/50 px-3 py-2 sm:px-4">
                   <button
                     type="button"
                     onClick={() => onOpen("messageFile", { apiUrl, query })}
                     aria-label="Attach a file"
-                    className="absolute left-8 top-7 flex h-6 w-6 items-center justify-center rounded-full bg-background p-1 text-primary transition hover:bg-primary hover:text-primary-foreground"
+                    className="absolute left-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md border border-white/10 bg-surface-hover text-zinc-200 transition hover:bg-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                   <Input
                     disabled={isLoading}
-                    className="border-border bg-muted/80 px-14 py-6 text-foreground focus-visible:ring-primary"
-                    placeholder={`Message ${type === "conversation" ? name : "🔥" + name}`}
+                    className="border-0 bg-transparent px-12 py-5 text-white placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    placeholder={`Message ${type === "conversation" ? name : `#${name}`}`}
                     {...field}
+                    onChange={(event) => {
+                      field.onChange(event);
+                      if (event.target.value.trim()) {
+                        startTyping();
+                      } else {
+                        stopTyping();
+                      }
+                    }}
                   />
-                  <div className="absolute top-7 right-8">
+                  <div className="absolute right-12 top-1/2 -translate-y-1/2">
                     <EmojiPicker
                       onChange={(emoji: string) => field.onChange(`${field.value} ${emoji}`)}
                     />
                   </div>
+                  <button
+                    type="submit"
+                    disabled={isLoading || !field.value.trim()}
+                    aria-label="Send message"
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md bg-indigo-500 text-white transition hover:bg-indigo-400 disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <SendHorizontal className="h-4 w-4" />
+                    )}
+                  </button>
                   {form.formState.errors.root?.message && (
-                    <p role="alert" className="px-1 text-xs text-destructive">
+                    <p role="alert" className="px-1 pt-2 text-xs text-destructive">
                       {form.formState.errors.root.message}
                     </p>
                   )}
                   {isLoading && (
-                    <Loader2 className="absolute right-14 top-7 h-4 w-4 animate-spin text-muted-foreground" />
+                    <Loader2 className="absolute right-14 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-zinc-400" />
                   )}
                 </div>
               </FormControl>

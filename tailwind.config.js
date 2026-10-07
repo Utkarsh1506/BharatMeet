@@ -22,6 +22,15 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        sidebar: "hsl(var(--sidebar-bg))",
+        panel: "hsl(var(--panel-bg))",
+        input: "hsl(var(--input-bg))",
+        surface: {
+          DEFAULT: "hsl(var(--surface-bg))",
+          hover: "hsl(var(--surface-hover))"
+        },
+        active: "hsl(var(--active-bg))",
+        link: "hsl(var(--accent-link))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

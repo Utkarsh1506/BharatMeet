@@ -3,6 +3,10 @@ import { Message } from "@prisma/client";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
+import { apiLogger } from "@/lib/logger";
+import { validateQueryParams, messagesQuerySchema } from "@/lib/query-validation";
+import { handleApiError, ApiErrors } from "@/lib/api-error";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
 
 const MESSAGES_BATCH = 10;
 
@@ -15,16 +19,26 @@ export async function GET(
     const profile = await currentProfile();
     const { searchParams } = new URL(req.url);
 
-    const cursor = searchParams.get("cursor");
-    const channelId = searchParams.get("channelId");
-
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return ApiErrors.unauthorized();
     }
-  
-    if (!channelId) {
-      return new NextResponse("Channel ID missing", { status: 400 });
+
+    // Apply rate limiting
+    const rateLimitResult = await checkRateLimit(apiLimiter, profile.id);
+    if (!rateLimitResult.success) {
+      return ApiErrors.rateLimitExceeded(
+        "Too many requests. Please slow down.",
+        getRateLimitHeaders(rateLimitResult)
+      );
     }
+
+    // Validate query parameters
+    const validation = validateQueryParams(messagesQuerySchema, searchParams);
+    if (!validation.success) {
+      return handleApiError(validation.error);
+    }
+
+    const { channelId, cursor } = validation.data;
 
     const channel = await db.channel.findFirst({
       where: {
@@ -41,7 +55,7 @@ export async function GET(
     });
 
     if (!channel) {
-      return new NextResponse("Channel not found", { status: 404 });
+      return ApiErrors.notFound("Channel not found");
     }
 
     let messages: Message[] = [];
@@ -59,7 +73,16 @@ export async function GET(
         include: {
           member: {
             include: {
-              profile: true,
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+            }
+          },
+          reactions: {
+            include: {
+              member: {
+                include: {
+                  profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+                }
+              }
             }
           }
         },
@@ -76,7 +99,16 @@ export async function GET(
         include: {
           member: {
             include: {
-              profile: true,
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+            }
+          },
+          reactions: {
+            include: {
+              member: {
+                include: {
+                  profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+                }
+              }
             }
           }
         },
@@ -95,9 +127,11 @@ export async function GET(
     return NextResponse.json({
       items: messages,
       nextCursor
+    }, {
+      headers: getRateLimitHeaders(rateLimitResult)
     });
   } catch (error) {
-    console.log("[MESSAGES_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    apiLogger.error({ error, channelId: req.url }, "Failed to fetch messages");
+    return handleApiError(error);
   }
 }

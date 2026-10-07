@@ -1,14 +1,56 @@
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
+import { currentProfile } from "@/lib/current-profile";
+import { db } from "@/lib/db";
+import { apiLogger } from "@/lib/logger";
+import { ApiErrors } from "@/lib/api-error";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+
 export async function GET(req: NextRequest) {
   const room = req.nextUrl.searchParams.get("room");
-  const username = req.nextUrl.searchParams.get("username");
-  const name = req.nextUrl.searchParams.get("name") || undefined;
+
   if (!room) {
     return NextResponse.json({ error: 'Missing "room" query parameter' }, { status: 400 });
-  } else if (!username) {
-    return NextResponse.json({ error: 'Missing "username" query parameter' }, { status: 400 });
+  }
+
+  const profile = await currentProfile();
+
+  if (!profile) {
+    return ApiErrors.unauthorized();
+  }
+
+  // Apply rate limiting
+  const rateLimitResult = await checkRateLimit(apiLimiter, profile.id);
+  if (!rateLimitResult.success) {
+    return ApiErrors.rateLimitExceeded(
+      "Too many requests. Please slow down.",
+      getRateLimitHeaders(rateLimitResult)
+    );
+  }
+
+  const [channel, conversation] = await Promise.all([
+    db.channel.findFirst({
+      where: {
+        id: room,
+        server: { members: { some: { profileId: profile.id } } },
+      },
+      select: { id: true },
+    }),
+    db.conversation.findFirst({
+      where: {
+        id: room,
+        OR: [
+          { memberOne: { profileId: profile.id } },
+          { memberTwo: { profileId: profile.id } },
+        ],
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!channel && !conversation) {
+    return NextResponse.json({ error: "You do not have access to this meeting" }, { status: 403 });
   }
 
   const apiKey = process.env.LIVEKIT_API_KEY?.trim();
@@ -32,16 +74,18 @@ export async function GET(req: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("LIVEKIT_ROOM_SETUP", error);
+    apiLogger.error({ error, room }, "Failed to create LiveKit room");
     return NextResponse.json({ error: "Unable to create LiveKit room" }, { status: 502 });
   }
 
   const at = new AccessToken(apiKey, apiSecret, {
-    identity: username,
-    name,
+    identity: profile.userId,
+    name: profile.name,
   });
 
   at.addGrant({ room, roomJoin: true, canPublish: true, canSubscribe: true });
 
-  return NextResponse.json({ token: at.toJwt() });
+  return NextResponse.json({ token: at.toJwt() }, {
+    headers: getRateLimitHeaders(rateLimitResult)
+  });
 }

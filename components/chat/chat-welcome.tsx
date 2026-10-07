@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { CircleEllipsis } from "lucide-react";
+import { ArrowDown, CircleEllipsis } from "lucide-react";
 
 import swagatamImage from "./swagatam.png";
 
@@ -13,28 +13,30 @@ export const ChatWelcome = ({
   type
 }: ChatWelcomeProps) => {
   return (
-    <div className="space-y-2 px-4 mb-4">
+    <div className="mb-6 rounded-2xl border border-border bg-card/60 px-4 py-5 md:px-8 md:py-7">
       {type === "channel" && (
-        <div className="h-[75px] w-[75px] rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
           <Image
             src={swagatamImage}
             alt="Welcome illustration"
-            className="h-10 w-10 object-contain"
+            className="h-9 w-9 object-contain"
             priority
           />
-          <CircleEllipsis className="h-12 w-12 text-[#476ee2]" />
         </div>
       )}
-      {/* <p className="text-xl md:text-3xl font-bold">
-        {type === "channel" ? "Welcome to 🫡 " : ""}{name}
-      </p> */}
-     
-      <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+      <p className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+        {type === "channel" ? `Welcome to ${name}` : `Start a conversation with ${name}`}
+      </p>
+      <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
         {type === "channel"
-          ? `This is the start of your conversation with ${name}`
-          : `Let ${name} know you'd like to start a conversation`
+          ? "This is the beginning of this meeting room. Share an update, ask a question, or bring the team in."
+          : `Send a message to ${name} to start the conversation.`
         }
       </p>
+      <div className="mt-5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <ArrowDown className="h-3.5 w-3.5" />
+        <span>Your messages will appear here</span>
+      </div>
     </div>
   )
 }

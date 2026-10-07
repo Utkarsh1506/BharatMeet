@@ -5,6 +5,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,18 +30,23 @@ import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(1, {
-    message: "Server name is required."
+    message: "Server name is required.",
   }),
   imageUrl: z.string().min(1, {
-    message: "Server image is required."
-  })
+    message: "Server image is required.",
+  }),
 });
 
-// ... previous imports and code ...
+const starterTemplates = [
+  "Product Lab",
+  "Design Studio",
+  "Community Hub",
+  "Startup Crew",
+  "Learning Circle",
+];
 
 export const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false);
-
   const router = useRouter();
 
   useEffect(() => {
@@ -52,7 +58,7 @@ export const InitialModal = () => {
     defaultValues: {
       name: "",
       imageUrl: "",
-    }
+    },
   });
 
   const isLoading = form.formState.isSubmitting;
@@ -70,7 +76,7 @@ export const InitialModal = () => {
 
       form.setError("root", { message });
     }
-  }
+  };
 
   if (!isMounted) {
     return null;
@@ -78,18 +84,22 @@ export const InitialModal = () => {
 
   return (
     <Dialog open>
-      <DialogContent className="overflow-hidden border-border bg-background p-0 text-foreground sm:max-w-md">
-        <DialogHeader className="border-b border-border bg-card px-6 pb-6 pt-8">
-          <DialogTitle className="text-center text-2xl font-bold tracking-tight">
-            Start your first Sabha
+      <DialogContent className="overflow-hidden border border-white/10 bg-surface p-0 text-white shadow-2xl shadow-indigo-950/30 sm:max-w-xl">
+        <DialogHeader className="border-b border-white/10 bg-gradient-to-r from-indigo-500/20 via-violet-500/10 to-cyan-500/20 px-6 pb-6 pt-8">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 shadow-lg shadow-indigo-500/30">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <DialogTitle className="text-center text-2xl font-bold tracking-tight text-white">
+            Build your first workspace
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
-            Create a focused space for your team, community, or next big idea.
+          <DialogDescription className="text-center text-sm text-zinc-300">
+            Start a focused space for your team, community, or next big idea.
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-6 px-6 pt-2">
+            <div className="space-y-6 px-6 pt-6">
               <div className="flex items-center justify-center text-center">
                 <FormField
                   control={form.control}
@@ -111,43 +121,60 @@ export const InitialModal = () => {
                 />
               </div>
 
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Quick picks
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {starterTemplates.map((template) => (
+                    <button
+                      key={template}
+                      type="button"
+                      onClick={() => form.setValue("name", template, { shouldValidate: true })}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-indigo-400/60 hover:bg-indigo-500/10"
+                    >
+                      {template}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel
-                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                    >
-                      Name your Sabha
+                    <FormLabel className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                      Workspace name
                     </FormLabel>
                     <FormControl>
                       <Input
                         disabled={isLoading}
-                        className="h-11 border-border bg-background focus-visible:ring-indigo-500"
+                        className="h-11 border border-white/10 bg-surface-hover text-white placeholder:text-zinc-500 focus-visible:ring-indigo-500"
                         placeholder="e.g. Product Builders"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs text-rose-300" />
                   </FormItem>
                 )}
               />
 
               {form.formState.errors.root?.message && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-rose-300">
                   {form.formState.errors.root.message}
                 </p>
               )}
             </div>
-            <DialogFooter className="border-t border-border bg-muted/30 px-6 py-4">
+
+            <DialogFooter className="border-t border-white/10 bg-sidebar px-6 py-4">
               <Button className="w-full sm:w-auto" variant="primary" disabled={isLoading}>
-                {isLoading ? "Creating Sabha..." : "Create Sabha"}
+                {isLoading ? "Creating workspace..." : "Create workspace"}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};

@@ -71,14 +71,15 @@ export const ServerSidebar = async ({
   const role = server.members.find((member) => member.profileId === profile.id)?.role;
 
   return (
-    <div className="flex h-full w-full flex-col bg-card text-primary">
-      <ServerHeader
-        server={server}
-        role={role}
-      />
-      <ScrollArea className="flex-1 px-3">
-        <div className="mt-2">
+    <div className="flex h-full w-full flex-col border-r border-white/5 bg-panel text-primary">
+      <div className="border-b border-white/5 bg-surface px-1 pb-1">
+        <ServerHeader server={server} role={role} />
+      </div>
+
+      <ScrollArea className="flex-1 px-3 pb-3 pt-2">
+        <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-2">
           <ServerSearch
+            serverId={serverId}
             data={[
               {
                 label: "Text Meeting",
@@ -119,7 +120,9 @@ export const ServerSidebar = async ({
             ]}
           />
         </div>
-        <Separator className="my-2 rounded-md bg-border" />
+
+        <Separator className="my-2 rounded-full bg-white/10" />
+
         {!!textChannels?.length && (
           <div className="mb-2">
             <ServerSection
