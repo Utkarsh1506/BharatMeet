@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  bharatmeet-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bharatmeet:latest
+    container_name: bharatmeet_app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Define these inside a .env file on the server, or pass them in:
+      # - DATABASE_URL=${DATABASE_URL}
+      # - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      # - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      # - NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+      # - NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+      # - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+      # - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+      # - UPLOADTHING_SECRET=${UPLOADTHING_SECRET}
+      # - UPLOADTHING_APP_ID=${UPLOADTHING_APP_ID}
+      # - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      # - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      # - NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+      # - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
+      # - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
+      # - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: bharatmeet_db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: bharatmeet
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
