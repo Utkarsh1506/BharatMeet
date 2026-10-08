@@ -3,12 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Member, Message, Profile } from "@prisma/client";
 
 import { useSocket } from "@/components/providers/socket-provider";
+import { useMessageSound } from "@/hooks/use-message-sound";
 
 type ChatSocketProps = {
   addKey: string;
   updateKey: string;
   queryKey: string;
   type: "channel" | "conversation";
+  member: Member;
 }
 
 type MessageWithMemberWithProfile = Message & {
@@ -22,9 +24,11 @@ export const useChatSocket = ({
   updateKey,
   queryKey,
   type,
+  member,
 }: ChatSocketProps) => {
   const { socket } = useSocket();
   const queryClient = useQueryClient();
+  const { playPop } = useMessageSound();
 
   useEffect(() => {
     if (!socket) {
@@ -61,6 +65,10 @@ export const useChatSocket = ({
     });
 
     socket.on(addKey, (message: MessageWithMemberWithProfile) => {
+      if (message.memberId !== member.id) {
+        playPop();
+      }
+
       queryClient.setQueryData([queryKey], (oldData: any) => {
         if (!oldData || !oldData.pages || oldData.pages.length === 0) {
           return {
@@ -92,5 +100,5 @@ export const useChatSocket = ({
       socket.off(addKey);
       socket.off(updateKey);
     }
-  }, [queryClient, addKey, queryKey, socket, updateKey]);
+  }, [queryClient, addKey, queryKey, socket, updateKey, member.id, playPop]);
 }

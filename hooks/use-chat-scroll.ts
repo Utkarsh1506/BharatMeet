@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type ChatScrollProps = {
   chatRef: React.RefObject<HTMLDivElement>;
@@ -16,6 +16,16 @@ export const useChatScroll = ({
   count,
 }: ChatScrollProps) => {
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+    setUnreadCount(0);
+    setIsAtBottom(true);
+  }, [bottomRef]);
 
   useEffect(() => {
     const topDiv = chatRef?.current;
@@ -25,6 +35,15 @@ export const useChatScroll = ({
 
       if (scrollTop === 0 && shouldLoadMore) {
         loadMore()
+      }
+
+      if (topDiv) {
+        const distanceFromBottom = topDiv.scrollHeight - topDiv.scrollTop - topDiv.clientHeight;
+        const atBottom = distanceFromBottom <= 150;
+        setIsAtBottom(atBottom);
+        if (atBottom) {
+          setUnreadCount(0);
+        }
       }
     };
 
@@ -38,6 +57,10 @@ export const useChatScroll = ({
   useEffect(() => {
     const bottomDiv = bottomRef?.current;
     const topDiv = chatRef.current;
+
+    // We don't want to increment unread if this is just an initial render
+    // or if the component is just remounting. We ONLY care when count actually increases.
+
     const shouldAutoScroll = () => {
       if (!hasInitialized && bottomDiv) {
         setHasInitialized(true);
@@ -49,7 +72,7 @@ export const useChatScroll = ({
       }
 
       const distanceFromBottom = topDiv.scrollHeight - topDiv.scrollTop - topDiv.clientHeight;
-      return distanceFromBottom <= 100;
+      return distanceFromBottom <= 150;
     }
 
     if (shouldAutoScroll()) {
@@ -58,6 +81,13 @@ export const useChatScroll = ({
           behavior: "smooth",
         });
       }, 100);
+    } else {
+      if (hasInitialized) {
+        setUnreadCount((prev) => prev + 1);
+      }
     }
-  }, [bottomRef, chatRef, count, hasInitialized]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bottomRef, chatRef, count]); // We deliberately only run when count changes
+
+  return { unreadCount, isAtBottom, scrollToBottom };
 }

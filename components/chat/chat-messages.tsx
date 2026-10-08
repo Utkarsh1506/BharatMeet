@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useRef, ElementRef } from "react";
 import { format } from "date-fns";
 import { Member, Message, Profile } from "@prisma/client";
-import { Loader2, ServerCrash, RefreshCw } from "lucide-react";
+import { Loader2, ServerCrash, RefreshCw, ArrowDown } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { useChatQuery } from "@/hooks/use-chat-query";
@@ -73,15 +73,15 @@ export const ChatMessages = ({
     paramKey,
     paramValue,
   });
-  useChatSocket({ queryKey, addKey, updateKey, type });
+  useChatSocket({ queryKey, addKey, updateKey, type, member });
   const typingUsers = useChatTyping({ chatId });
-  useChatScroll({
+  const { unreadCount, isAtBottom, scrollToBottom } = useChatScroll({
     chatRef,
     bottomRef,
     loadMore: fetchNextPage,
     shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
     count: data?.pages?.[0]?.items?.length ?? 0,
-  })
+  });
 
   useEffect(() => {
     if (status !== "success" || !targetMessageId) {
@@ -197,6 +197,19 @@ export const ChatMessages = ({
               : `${typingUsers.length} people are typing...`}
           </div>
         )}
+
+      <div className="sticky bottom-0 flex justify-center w-full pointer-events-none pb-4 z-10 transition-opacity">
+        {!isAtBottom && unreadCount > 0 && (
+          <button
+            onClick={scrollToBottom}
+            className="pointer-events-auto rounded-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 px-3 py-1.5 flex items-center justify-center shadow-xl transition-all text-white text-xs font-semibold gap-1 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          >
+            <ArrowDown className="h-4 w-4 animate-bounce" />
+            {unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}
+          </button>
+        )}
+      </div>
+
       <div ref={bottomRef} />
     </div>
   )

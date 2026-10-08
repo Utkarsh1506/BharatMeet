@@ -238,11 +238,9 @@ export const ChatItem = ({
 
           <div className="mt-1 max-w-[min(100%,56rem)] border-t border-white/10 px-1 pt-2">
             {isImage && (
-              <a 
-                href={fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative mt-1 flex h-48 w-48 items-center overflow-hidden rounded-xl border border-white/5 bg-surface-hover sm:h-56 sm:w-56"
+              <button
+                onClick={() => onOpen("imageLightbox", { imageUrl: fileUrl })}
+                className="relative mt-1 flex h-48 w-48 items-center overflow-hidden rounded-xl border border-white/5 bg-surface-hover sm:h-56 sm:w-56 cursor-zoom-in transition hover:opacity-90 active:scale-95"
               >
                 <Image
                   src={fileUrl}
@@ -251,7 +249,7 @@ export const ChatItem = ({
                   sizes="(max-width: 640px) 14rem, 14rem"
                   className="object-cover"
                 />
-              </a>
+              </button>
             )}
             {isPDF && (
               <div className="mt-1 flex max-w-md items-center rounded-xl border border-white/5 bg-surface-hover p-3">
