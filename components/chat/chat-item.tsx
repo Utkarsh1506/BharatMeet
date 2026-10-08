@@ -6,7 +6,7 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Check, Edit, FileIcon, Link2, MessageSquareReply, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
+import { Check, Edit, FileIcon, Link2, Reply, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -202,7 +202,7 @@ export const ChatItem = ({
         <div className="flex min-w-0 flex-1 flex-col">
           {replyTo && (
             <div className="mb-1 flex items-center gap-x-1 pl-1 text-[11px] text-zinc-400">
-              <MessageSquareReply className="h-3 w-3" />
+              <Reply className="h-3 w-3" />
               <button
                 className="hover:underline font-medium text-zinc-300 truncate"
                 onClick={() => {
@@ -368,7 +368,7 @@ export const ChatItem = ({
               onClick={() => onReply({ id, content, fileUrl, memberName: member.profile.name })}
               className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
-              <MessageSquareReply className="h-4 w-4" />
+              <Reply className="h-4 w-4" />
             </button>
           </ActionTooltip>
         )}
