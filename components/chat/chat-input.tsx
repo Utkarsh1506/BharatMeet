@@ -5,7 +5,7 @@ import axios from "axios";
 import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plus, SendHorizontal } from "lucide-react";
+import { Loader2, Plus, SendHorizontal, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useModal } from "@/hooks/use-modal-store";
+import { useReplyStore } from "@/hooks/use-reply-store";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { useSocket } from "@/components/providers/socket-provider";
 
@@ -39,6 +40,7 @@ export const ChatInput = ({
   type,
 }: ChatInputProps) => {
   const { onOpen } = useModal();
+  const { isReplying, replyData, onCancel } = useReplyStore();
   const { socket } = useSocket();
   const { userId } = useAuth();
   const router = useRouter();
@@ -118,11 +120,14 @@ export const ChatInput = ({
         query,
       });
 
-      await axios.post(url, values);
+      await axios.post(url, { ...values, replyToId: isReplying ? replyData?.id : undefined });
 
       stopTyping();
       form.reset();
       window.localStorage.removeItem(draftKey);
+      if (isReplying) {
+        onCancel();
+      }
       router.refresh();
     } catch (error) {
       form.setError("root", {
@@ -134,8 +139,24 @@ export const ChatInput = ({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="px-3 pb-4 pt-2 sm:px-4">
+    <div className="flex w-full flex-col relative">
+      {isReplying && replyData && (
+        <div className="mx-4 flex items-center justify-between rounded-t-xl bg-surface-hover/80 px-4 py-2.5 text-sm border-x border-t border-white/5 border-b-0 -mb-2 z-10 transition-all">
+          <div className="flex items-center gap-x-2 text-zinc-400">
+            <span className="font-semibold text-zinc-300">Replying to {replyData.memberName}</span>
+            <span className="truncate max-w-[150px] sm:max-w-xs text-zinc-500 pl-1 border-l border-white/10">{replyData.fileUrl ? "Attachment" : replyData.content}</span>
+          </div>
+          <button
+            onClick={onCancel}
+            className="text-zinc-400 hover:text-white transition rounded-full p-1 hover:bg-white/10"
+            type="button"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="px-3 pb-4 sm:px-4 z-20">
         <div className="section-kicker mb-2 flex items-center gap-2 px-1">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           <span>{type === "conversation" ? "Direct message" : `Message #${name}`}</span>
@@ -201,5 +222,6 @@ export const ChatInput = ({
         />
       </form>
     </Form>
+    </div>
   )
 }

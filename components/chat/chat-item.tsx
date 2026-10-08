@@ -6,7 +6,7 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Check, Edit, FileIcon, Link2, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
+import { Check, Edit, FileIcon, Link2, MessageSquareReply, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
+import { useReplyStore } from "@/hooks/use-reply-store";
 
 interface ChatItemProps {
   id: string;
@@ -43,6 +44,16 @@ interface ChatItemProps {
     messageId?: string;
     directMessageId?: string;
   }>;
+  replyTo?: {
+    id: string;
+    content: string;
+    fileUrl?: string | null;
+    member?: {
+      profile: {
+        name: string;
+      };
+    };
+  } | null;
   socketUrl: string;
   socketQuery: Record<string, string>;
 };
@@ -68,12 +79,14 @@ export const ChatItem = ({
   isUpdated,
   highlighted = false,
   reactions,
+  replyTo,
   socketUrl,
   socketQuery
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { onOpen } = useModal();
+  const onReply = useReplyStore((state) => state.onReply);
   const params = useParams();
   const router = useRouter();
 
@@ -187,6 +200,23 @@ export const ChatItem = ({
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {replyTo && (
+            <div className="mb-1 flex items-center gap-x-1 pl-1 text-[11px] text-zinc-400">
+              <MessageSquareReply className="h-3 w-3" />
+              <button
+                className="hover:underline font-medium text-zinc-300 truncate"
+                onClick={() => {
+                  const el = document.getElementById(`message-${replyTo.id}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              >
+                @{replyTo?.member?.profile?.name ?? "Unknown"}
+              </button>
+              <span className="truncate max-w-[200px] md:max-w-md ml-1 opacity-75">
+                {replyTo.fileUrl ? "Attachment" : replyTo.content}
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-x-2">
             <div className="flex min-w-0 items-center">
               <button
@@ -329,7 +359,19 @@ export const ChatItem = ({
         </div>
       </div>
 
-      <div className="absolute -top-1 right-5 hidden items-center gap-x-1 rounded-xl border border-white/5 bg-surface p-1 group-hover:flex">
+      <div className="absolute -top-1 right-5 hidden items-center gap-x-1 rounded-xl border border-white/5 bg-surface p-1 shadow-sm group-hover:flex">
+        {!deleted && (
+          <ActionTooltip label="Reply">
+            <button
+              type="button"
+              aria-label="Reply to message"
+              onClick={() => onReply({ id, content, fileUrl, memberName: member.profile.name })}
+              className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+              <MessageSquareReply className="h-4 w-4" />
+            </button>
+          </ActionTooltip>
+        )}
         <ActionTooltip label={isCopied ? "Copied" : "Copy link"}>
           <button
             type="button"

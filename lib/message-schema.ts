@@ -17,6 +17,7 @@ export const createMessageSchema = z.object({
     .max(4000)
     .transform((val) => sanitizeMessage(val)),
   fileUrl: fileUrlSchema,
+  replyToId: z.string().uuid().optional().nullable(),
 });
 
 export const updateMessageSchema = z.object({

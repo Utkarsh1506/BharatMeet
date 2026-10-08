@@ -85,6 +85,9 @@ model Message {
   memberId  String
   channelId String
   deleted   Boolean         @default(false)
+  replyToId String?
+  replyTo   Message?        @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[]       @relation("MessageReplies")
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   member    Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -93,6 +96,7 @@ model Message {
 
   @@index([channelId])
   @@index([memberId])
+  @@index([replyToId])
   @@index([channelId, createdAt(sort: Desc)])
   @@index([channelId, deleted, createdAt(sort: Desc)])
 }
@@ -146,6 +150,9 @@ model DirectMessage {
   memberId       String
   conversationId String
   deleted        Boolean      @default(false)
+  replyToId      String?
+  replyTo        DirectMessage? @relation("DirectMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        DirectMessage[] @relation("DirectMessageReplies")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -154,6 +161,7 @@ model DirectMessage {
 
   @@index([memberId])
   @@index([conversationId])
+  @@index([replyToId])
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([conversationId, deleted, createdAt(sort: Desc)])
 }

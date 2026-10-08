@@ -76,6 +76,15 @@ export async function GET(
               profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
             }
           },
+          replyTo: {
+            include: {
+              member: {
+                include: {
+                  profile: { select: { id: true, name: true } }
+                }
+              }
+            }
+          },
           reactions: {
             include: {
               member: {
@@ -100,6 +109,15 @@ export async function GET(
           member: {
             include: {
               profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+            }
+          },
+          replyTo: {
+            include: {
+              member: {
+                include: {
+                  profile: { select: { id: true, name: true } }
+                }
+              }
             }
           },
           reactions: {

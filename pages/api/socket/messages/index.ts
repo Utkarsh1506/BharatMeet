@@ -75,11 +75,21 @@ export default async function handler(
         fileUrl: result.data.fileUrl,
         channelId: channelId as string,
         memberId: member.id,
+        replyToId: result.data.replyToId,
       },
       include: {
         member: {
           include: {
             profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+          }
+        },
+        replyTo: {
+          include: {
+            member: {
+              include: {
+                profile: { select: { id: true, name: true } }
+              }
+            }
           }
         }
       }

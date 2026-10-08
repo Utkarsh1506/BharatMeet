@@ -25,6 +25,7 @@ type MessageWithMemberWithProfile = Message & {
     memberId: string;
     messageId: string;
   }>
+  replyTo?: any;
 }
 
 interface ChatMessagesProps {
@@ -172,6 +173,7 @@ export const ChatMessages = ({
                 isUpdated={message.updatedAt !== message.createdAt}
                 highlighted={message.id === targetMessageId}
                 reactions={message.reactions || []}
+                replyTo={message.replyTo}
                 socketUrl={socketUrl}
                 socketQuery={socketQuery}
               />

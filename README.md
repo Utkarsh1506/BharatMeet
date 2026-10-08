@@ -5,6 +5,7 @@ Features:
 
 - Rate limiting to prevent abuse and DoS attacks
 - Real-time messaging using Socket.io
+- **Thread Replies (Message Quoting) for targeted responses in channels**
 - Send attachments as messages using UploadThing
 - Delete & Edit messages in real time for all users
 - Create Text, Audio and Video call Channels
