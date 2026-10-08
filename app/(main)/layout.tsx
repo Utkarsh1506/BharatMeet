@@ -6,12 +6,11 @@ const MainLayout = async ({
   children: React.ReactNode;
 }) => {
   return (
-    <div className="flex h-full min-w-0">
-      {/* Navigation sidebar - hidden on mobile (< 640px), visible on sm and up */}
-      <div className="hidden sm:flex h-full w-14 shrink-0 flex-col overflow-hidden bg-sidebar lg:w-[72px]">
+    <div className="h-full">
+      <div className="hidden md:flex h-full w-[72px] z-30 flex-col fixed inset-y-0">
         <NavigationSidebar />
       </div>
-      <main className="h-full min-w-0 flex-1">
+      <main className="md:pl-[72px] h-full">
         {children}
       </main>
     </div>
