@@ -25,7 +25,7 @@ Features:
 
 ### Prerequisites
 
-**Node version 18.x.x**
+**Node.js 24.x**
 
 ### Cloning the repository
 
