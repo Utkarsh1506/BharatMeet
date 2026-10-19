@@ -104,9 +104,9 @@ export const ChatMessages = ({
 
   if (status === "loading") {
     return (
-      <div className="flex flex-col flex-1 justify-center items-center">
-        <Loader2 className="h-7 w-7 text-zinc-500 animate-spin my-4" />
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <Loader2 className="my-4 h-7 w-7 animate-spin text-primary" />
+        <p className="text-sm font-medium text-muted-foreground">
           Loading messages...
         </p>
       </div>
@@ -125,7 +125,7 @@ export const ChatMessages = ({
         </p>
         <button
           onClick={() => refetch()}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-active px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <RefreshCw className="h-4 w-4" />
           Try Again
@@ -135,7 +135,7 @@ export const ChatMessages = ({
   }
 
   return (
-    <div ref={chatRef} className="flex-1 flex flex-col py-4 overflow-y-auto">
+    <div ref={chatRef} className="meeting-canvas flex min-h-0 flex-1 flex-col overscroll-y-contain overflow-y-auto py-4 [scrollbar-width:thin] sm:py-6">
       {!hasNextPage && <div className="flex-1" />}
       {!hasNextPage && (
         <ChatWelcome
@@ -150,17 +150,17 @@ export const ChatMessages = ({
           ) : (
             <button
               onClick={() => fetchNextPage()}
-              className="text-link hover:text-zinc-600 dark:text-link text-xs my-4 dark:hover:text-zinc-300 transition"
+              className="my-4 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-link transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
             >
               Load previous messages
             </button>
           )}
         </div>
       )}
-      <div className="flex flex-col-reverse mt-auto">
+      <div className="mx-auto mt-auto flex w-full max-w-[1080px] flex-col-reverse gap-1 px-3 pb-2 sm:gap-1.5 sm:px-6 sm:pb-3">
         {data?.pages?.map((group, i) => (
           <Fragment key={i}>
-            {group.items.map((message: MessageWithMemberWithProfile) => (
+            {group?.items?.map((message: MessageWithMemberWithProfile) => (
               <ChatItem
                 key={message.id}
                 id={message.id}
@@ -202,7 +202,7 @@ export const ChatMessages = ({
         {!isAtBottom && unreadCount > 0 && (
           <button
             onClick={scrollToBottom}
-            className="pointer-events-auto rounded-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 px-3 py-1.5 flex items-center justify-center shadow-xl transition-all text-white text-xs font-semibold gap-1 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="pointer-events-auto flex items-center justify-center gap-1 rounded-full border border-primary/20 bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-xl shadow-primary/15 transition-all hover:-translate-y-0.5 hover:brightness-105 active:scale-95"
           >
             <ArrowDown className="h-4 w-4 animate-bounce" />
             {unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}

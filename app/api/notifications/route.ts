@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
-import { ApiErrors } from "@/lib/api-error";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+import { apiLogger } from "@/lib/logger";
+
+const notificationUpdateSchema = z.union([
+  z.object({ notificationId: z.string().uuid() }).strict(),
+  z.object({ markAllAsRead: z.literal(true) }).strict(),
+]);
 
 export async function GET() {
   try {
@@ -36,8 +43,8 @@ export async function GET() {
       headers: getRateLimitHeaders(rateLimitResult)
     });
   } catch (error) {
-    console.log("[NOTIFICATIONS_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    apiLogger.error({ error }, "Failed to fetch notifications");
+    return handleApiError(error);
   }
 }
 
@@ -58,12 +65,16 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => null);
+    const validation = notificationUpdateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ error: "Provide a valid notificationId or markAllAsRead: true" }, { status: 400 });
+    }
 
-    if (typeof body.notificationId === "string") {
+    if ("notificationId" in validation.data) {
       await db.notification.updateMany({
         where: {
-          id: body.notificationId,
+          id: validation.data.notificationId,
           profileId: profile.id,
         },
         data: {
@@ -84,9 +95,9 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: getRateLimitHeaders(rateLimitResult) });
   } catch (error) {
-    console.log("[NOTIFICATIONS_PATCH]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    apiLogger.error({ error }, "Failed to update notifications");
+    return handleApiError(error);
   }
 }

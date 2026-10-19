@@ -9,20 +9,9 @@ import { isDevelopment, isProduction } from "./env";
 // Configure Pino logger
 export const logger = pino({
   level: isDevelopment ? "debug" : "info",
-
-  // Pretty print in development
-  ...(isDevelopment && {
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: true,
-        translateTime: "HH:MM:ss Z",
-        ignore: "pid,hostname",
-      },
-    },
-  }),
-
-  // Structured JSON in production
+  // Keep transport creation out of Next's bundled server routes. Pino's worker
+  // transport cannot resolve pino-pretty from those bundles and can prevent
+  // the Socket.IO endpoint from starting. Structured output works in both.
   ...(isProduction && {
     formatters: {
       level: (label) => {

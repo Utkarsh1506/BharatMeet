@@ -1,93 +1,77 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Separator } from "@/components/ui/separator";
-import { currentProfile } from "@/lib/current-profile"
-import { db } from "@/lib/db";
-
-import { NavigationAction } from "./navigation-action";
-import { NavigationItem } from "./navigation-item";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { PresenceStatus } from "@/components/presence-status";
+import { NavigationAction } from "./navigation-action";
 
-export const NavigationSidebar = async () => {
-  const profile = await currentProfile();
+interface NavigationSidebarProps {
+  servers: Array<{ id: string; name: string; imageUrl: string }>;
+}
 
-  if (!profile) {
-    return redirect("/");
-  }
-
-  const servers = await db.server.findMany({
-    where: {
-      members: {
-        some: {
-          profileId: profile.id
-        }
-      }
-    }
-  });
-
-  const notifications = await db.notification.findMany({
-    where: {
-      profileId: profile.id,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 8,
-  });
+export const NavigationSidebar = ({ servers = [] }: NavigationSidebarProps) => {
+  const pathname = usePathname();
 
   return (
-    <div className="flex h-full w-full flex-col items-center border-r border-white/10 bg-sidebar px-2 py-3 text-primary">
-      <Link
-        href="/"
-        className="mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-indigo-300/30 bg-indigo-500 text-[0.58rem] font-black tracking-[0.22em] text-white transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
-        aria-label="Home"
-      >
-        BM
+    <header className="flex h-16 w-full items-center gap-2 border-b border-border/70 bg-sidebar/95 px-2.5 backdrop-blur-xl sm:gap-3 sm:px-5">
+      <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label="Bharat Meet home">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-[10px] font-black tracking-[0.12em] text-primary-foreground shadow-md shadow-primary/15 transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-105">
+          BM
+        </span>
+        <span className="hidden sm:!block">
+          <span className="block text-sm font-bold leading-tight tracking-tight text-foreground">Bharat Meet</span>
+          <span className="block text-[10px] leading-tight text-muted-foreground">A better room for every team</span>
+        </span>
       </Link>
 
-      <NavigationAction />
-      <Separator className="mx-auto my-1 h-px w-8 bg-white/15" />
+      <div className="mx-1 hidden h-8 w-px shrink-0 bg-border sm:!block" />
 
-      <ScrollArea className="flex-1 w-full pb-2">
-        <div className="space-y-1 px-1">
-          {servers.length === 0 ? (
-            <div className="border-l border-dashed border-white/20 px-2 py-4 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              No spaces
-            </div>
-          ) : (
-            servers.map((server) => (
-              <div key={server.id}>
-                <NavigationItem
-                  id={server.id}
-                  name={server.name}
-                  imageUrl={server.imageUrl}
-                />
-              </div>
-            ))
-          )}
-        </div>
-      </ScrollArea>
+      <nav aria-label="Workspaces" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {servers.map((server) => {
+          const isActive = pathname?.startsWith(`/servers/${server.id}`) ?? false;
 
-      <div className="mt-auto flex w-full flex-col items-center gap-y-3 border-t border-white/10 pb-2 pt-3">
-        <div className="w-full px-1">
+          return (
+            <Link
+              key={server.id}
+              href={`/servers/${server.id}`}
+              aria-current={isActive ? "page" : undefined}
+              className={`group flex h-10 max-w-36 shrink-0 items-center gap-1.5 rounded-xl border px-2 text-sm transition-all duration-200 sm:max-w-none sm:gap-2 sm:px-2.5 ${
+                isActive
+                  ? "border-primary/25 bg-primary/10 text-foreground shadow-sm shadow-primary/5"
+                  : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-surface hover:text-foreground"
+              }`}
+            >
+              <span className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/15 text-[9px] font-bold text-primary">
+                {server.imageUrl ? (
+                  <Image src={server.imageUrl} alt="" fill sizes="24px" className="object-cover" />
+                ) : (
+                  server.name.slice(0, 2).toUpperCase()
+                )}
+              </span>
+              <span className="max-w-14 truncate sm:max-w-36">{server.name}</span>
+              {isActive && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <NavigationAction />
+        <div className="hidden md:!block">
           <PresenceStatus />
         </div>
-        <NotificationsPanel initialNotifications={notifications} />
-        <ModeToggle />
+        <div className="hidden sm:!block"><NotificationsPanel initialNotifications={[]} /></div>
+        <div className="hidden sm:!block"><ModeToggle /></div>
         <UserButton
           afterSignOutUrl="/"
-          appearance={{
-            elements: {
-              avatarBox: "h-[42px] w-[42px] ring-1 ring-white/10 shadow-none"
-            }
-          }}
+          appearance={{ elements: { avatarBox: "h-8 w-8 ring-1 ring-border shadow-none sm:h-9 sm:w-9" } }}
         />
       </div>
-    </div>
-  )
-}
+    </header>
+  );
+};

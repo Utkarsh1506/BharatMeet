@@ -56,13 +56,13 @@ export const PresenceStatus = () => {
         <button
           type="button"
           aria-label={`Availability: ${selected.label}`}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-zinc-400 transition hover:bg-white/5 hover:text-zinc-200"
+          className="flex w-auto items-center gap-2 rounded-full border border-border/70 bg-surface/70 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:bg-surface-hover hover:text-foreground"
         >
           {selected.icon}
           <span>{selected.label}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="right" className="w-56 border-white/10 bg-surface p-1 text-zinc-200">
+      <DropdownMenuContent align="end" side="bottom" className="w-56 rounded-xl border-border bg-card p-1 text-foreground shadow-xl">
         {statusOptions.map((option) => (
           <DropdownMenuItem
             key={option.value}
@@ -74,7 +74,7 @@ export const PresenceStatus = () => {
               <span className="text-xs font-medium">{option.label}</span>
               <span className="text-[10px] text-zinc-500">{option.description}</span>
             </span>
-            {status === option.value && <Check className="h-3.5 w-3.5 text-indigo-300" />}
+            {status === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

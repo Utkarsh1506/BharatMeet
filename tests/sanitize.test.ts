@@ -105,6 +105,11 @@ describe("Input Sanitization", () => {
       expect(result).toBeNull();
     });
 
+    it("should reject lookalike domains that contain a trusted hostname", () => {
+      expect(sanitizeFileUrl("https://uploadthing.com.attacker.example/file.png")).toBeNull();
+      expect(sanitizeFileUrl("https://notutfs.io/file.png")).toBeNull();
+    });
+
     it("should handle null input", () => {
       expect(sanitizeFileUrl(null)).toBeNull();
       expect(sanitizeFileUrl(undefined)).toBeNull();

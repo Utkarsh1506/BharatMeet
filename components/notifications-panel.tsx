@@ -126,27 +126,27 @@ export const NotificationsPanel = ({
         <Button
           variant="outline"
           size="icon"
-          className="relative h-10 w-10 border border-white/5 bg-surface text-zinc-300 hover:bg-surface-hover hover:text-white"
+          className="relative h-10 w-10 rounded-xl border border-border bg-surface text-muted-foreground hover:border-primary/30 hover:bg-surface-hover hover:text-foreground"
         >
           <Bell className="h-[1.1rem] w-[1.1rem]" />
           {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1 text-[10px] font-semibold text-white">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
               {unreadCount}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 border border-white/5 bg-surface p-0 text-zinc-200">
-        <div className="flex items-center justify-between border-b border-white/5 px-3 py-2">
-          <p className="text-sm font-semibold text-white">
+      <DropdownMenuContent align="end" className="w-80 rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+          <p className="text-sm font-semibold text-foreground">
             Notifications{isLoading ? "..." : ""}
           </p>
           {unreadCount > 0 && (
             <button
               type="button"
               onClick={markAllAsRead}
-              className="inline-flex items-center gap-1 text-[11px] text-indigo-300 transition hover:text-indigo-200"
+              className="inline-flex items-center gap-1 text-[11px] text-link transition hover:text-foreground"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Mark all read
@@ -155,7 +155,7 @@ export const NotificationsPanel = ({
         </div>
 
         {notifications.length === 0 ? (
-          <div className="px-3 py-6 text-center text-sm text-zinc-400">
+          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
             No notifications yet.
           </div>
         ) : (
@@ -165,18 +165,18 @@ export const NotificationsPanel = ({
                 <Link
                   href={notification.link}
                   onClick={() => markAsRead(notification.id)}
-                  className={notification.read ? "block px-3 py-3 text-zinc-300 transition hover:bg-white/5" : "block bg-indigo-500/5 px-3 py-3 text-white transition hover:bg-indigo-500/10"}
+                  className={notification.read ? "block px-4 py-3 text-foreground/80 transition hover:bg-surface-hover" : "block bg-primary/5 px-4 py-3 text-foreground transition hover:bg-primary/10"}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-400">{notification.content}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{notification.content}</p>
                     </div>
                     {!notification.read && (
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-indigo-400" />
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
                     )}
                   </div>
-                  <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                     {formatTime(notification.createdAt)}
                   </p>
                 </Link>

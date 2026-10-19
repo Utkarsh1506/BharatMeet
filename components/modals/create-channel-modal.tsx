@@ -98,7 +98,7 @@ export const CreateChannelModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-white text-black p-0 overflow-hidden">
+      <DialogContent className="bg-card text-card-foreground p-0 overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
             Create Meeting
@@ -120,7 +120,7 @@ export const CreateChannelModal = () => {
                     <FormControl>
                       <Input
                         disabled={isLoading}
-                        className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
+                        className="border-border bg-input text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
                         placeholder="Enter channel name"
                         {...field}
                       />
@@ -142,7 +142,7 @@ export const CreateChannelModal = () => {
                     >
                       <FormControl>
                         <SelectTrigger
-                          className="bg-zinc-300/50 border-0 focus:ring-0 text-black ring-offset-0 focus:ring-offset-0 capitalize outline-none"
+                          className="border-border bg-input text-foreground focus:ring-2 focus:ring-ring focus:ring-offset-0 capitalize outline-none"
                         >
                           <SelectValue placeholder="Select a channel type" />
                         </SelectTrigger>
@@ -164,7 +164,7 @@ export const CreateChannelModal = () => {
                 )}
               />
             </div>
-            <DialogFooter className="bg-gray-100 px-6 py-4">
+            <DialogFooter className="bg-surface px-6 py-4">
               <Button variant="primary" disabled={isLoading}>
                 Create
               </Button>

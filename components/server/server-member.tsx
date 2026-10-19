@@ -9,14 +9,14 @@ import { UserAvatar } from "@/components/user-avatar";
 import { useSocket } from "@/components/providers/socket-provider";
 
 interface ServerMemberProps {
-  member: Member & { profile: Profile };
+  member: Member & { profile: Pick<Profile, "id" | "name" | "imageUrl" | "userId"> };
   server: Server;
 }
 
 const roleIconMap = {
   [MemberRole.GUEST]: null,
-  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 ml-2 text-indigo-500" />,
-  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 ml-2 text-indigo-500" />
+  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 ml-2 text-primary" />,
+  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 ml-2 text-primary" />
 }
 
 export const ServerMember = ({
@@ -39,8 +39,8 @@ export const ServerMember = ({
     <button
       onClick={onClick}
       className={cn(
-        "group mb-1 flex w-full items-center gap-x-2 rounded-lg px-2 py-2 transition-colors hover:bg-white/5",
-        params?.memberId === member.id && "bg-active text-white"
+        "group mb-1 flex w-full items-center gap-x-2 rounded-xl px-2.5 py-2 transition-colors hover:bg-surface-hover",
+        params?.memberId === member.id && "bg-primary/10 text-primary ring-1 ring-primary/15"
       )}
     >
       <div className="relative shrink-0">
@@ -62,7 +62,7 @@ export const ServerMember = ({
       <p
         className={cn(
           "text-sm font-medium transition-colors",
-          params?.memberId === member.id ? "text-white" : "text-zinc-300 group-hover:text-white"
+          params?.memberId === member.id ? "text-primary" : "text-foreground/75 group-hover:text-foreground"
         )}
       >
         {member.profile.name}

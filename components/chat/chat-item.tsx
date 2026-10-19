@@ -58,9 +58,26 @@ interface ChatItemProps {
   socketQuery: Record<string, string>;
 };
 
+const getRequestErrorMessage = (error: unknown, fallback: string) => {
+  if (!axios.isAxiosError(error)) return fallback;
+
+  const responseData = error.response?.data;
+  if (typeof responseData === "string") return responseData;
+  if (responseData && typeof responseData === "object") {
+    const payload = responseData as { error?: string | { message?: string }; message?: string };
+    if (typeof payload.error === "string") return payload.error;
+    if (payload.error && typeof payload.error === "object" && payload.error.message) {
+      return payload.error.message;
+    }
+    if (payload.message) return payload.message;
+  }
+
+  return fallback;
+};
+
 const roleIconMap = {
   "GUEST": null,
-  "MODERATOR": <ShieldCheck className="h-4 w-4 ml-2 text-indigo-500" />,
+  "MODERATOR": <ShieldCheck className="h-4 w-4 ml-2 text-primary" />,
   "ADMIN": <ShieldAlert className="h-4 w-4 ml-2 text-rose-500" />,
 }
 
@@ -132,9 +149,7 @@ export const ChatItem = ({
       setIsEditing(false);
     } catch (error) {
       form.setError("root", {
-        message: axios.isAxiosError(error)
-          ? error.response?.data || "Your message could not be updated."
-          : "Your message could not be updated.",
+        message: getRequestErrorMessage(error, "Your message could not be updated."),
       });
     }
   }
@@ -152,8 +167,9 @@ export const ChatItem = ({
   const isOwner = currentMember.id === member.id;
   const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
   const canEditMessage = !deleted && isOwner && !fileUrl;
+  const isVoiceUpdate = Boolean(fileUrl && content === "Voice update");
   const isPDF = fileType === "pdf" && fileUrl;
-  const isImage = !isPDF && fileUrl;
+  const isImage = !isPDF && !isVoiceUpdate && fileUrl;
   const reactionOptions = ["👍", "🎉", "🔥", "❤️"];
 
   const handleReaction = async (emoji: string) => {
@@ -186,14 +202,14 @@ export const ChatItem = ({
     <div
       id={`message-${id}`}
       className={cn(
-        "group relative w-full border-l-2 border-transparent px-3 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.02] sm:px-4",
-        highlighted && "border-indigo-400 bg-indigo-500/10"
+        "message-entry group relative w-full rounded-xl border-b border-border/35 px-3 py-3 transition-colors duration-200 hover:border-primary/20 hover:bg-card/35 sm:px-4 sm:py-3.5",
+        highlighted && "border-primary/45 bg-primary/10 shadow-[0_8px_28px_hsl(var(--primary)/0.1)]"
       )}
     >
-      <div className="flex w-full items-start gap-x-3">
+      <div className="grid w-full grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3">
         <button
           onClick={onMemberClick}
-          className="mt-1 shrink-0 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-full"
+          className="mt-0.5 shrink-0 cursor-pointer rounded-full transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`View ${member.profile.name}'s profile`}
         >
           <UserAvatar src={member.profile.imageUrl} />
@@ -201,10 +217,10 @@ export const ChatItem = ({
 
         <div className="flex min-w-0 flex-1 flex-col">
           {replyTo && (
-            <div className="mb-1 flex items-center gap-x-1 pl-1 text-[11px] text-zinc-400">
+            <div className="mb-1 flex items-center gap-x-1 pl-1 text-[11px] text-muted-foreground">
               <Reply className="h-3 w-3" />
               <button
-                className="hover:underline font-medium text-zinc-300 truncate"
+                className="hover:underline font-medium text-foreground/75 truncate"
                 onClick={() => {
                   const el = document.getElementById(`message-${replyTo.id}`);
                   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -217,11 +233,11 @@ export const ChatItem = ({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-x-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
             <div className="flex min-w-0 items-center">
               <button
                 onClick={onMemberClick}
-                className="cursor-pointer text-sm font-semibold text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm"
+                className="min-w-0 max-w-full truncate cursor-pointer rounded-sm text-sm font-bold tracking-tight text-foreground hover:text-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {member.profile.name}
               </button>
@@ -231,16 +247,16 @@ export const ChatItem = ({
                 </ActionTooltip>
               )}
             </div>
-            <span className="text-[11px] text-zinc-400">
-              {timestamp}
+            <span className="text-[10px] font-medium tabular-nums text-muted-foreground/70" title={timestamp}>
+              {timestamp.split(", ").slice(-1)[0]}
             </span>
           </div>
 
-          <div className="mt-1 max-w-[min(100%,56rem)] border-t border-white/10 px-1 pt-2">
+          <div className="mt-1 max-w-[min(100%,56rem)] px-1 pt-1">
             {isImage && (
               <button
                 onClick={() => onOpen("imageLightbox", { imageUrl: fileUrl })}
-                className="relative mt-1 flex h-48 w-48 items-center overflow-hidden rounded-xl border border-white/5 bg-surface-hover sm:h-56 sm:w-56 cursor-zoom-in transition hover:opacity-90 active:scale-95"
+                className="relative mt-1 flex h-48 w-48 items-center overflow-hidden rounded-xl border border-border bg-surface-hover sm:h-56 sm:w-56 cursor-zoom-in transition hover:opacity-90 active:scale-95"
               >
                 <Image
                   src={fileUrl}
@@ -252,26 +268,32 @@ export const ChatItem = ({
               </button>
             )}
             {isPDF && (
-              <div className="mt-1 flex max-w-md items-center rounded-xl border border-white/5 bg-surface-hover p-3">
-                <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
+              <div className="mt-1 flex max-w-md items-center rounded-xl border border-border bg-surface-hover p-3">
+                <FileIcon className="h-10 w-10 fill-primary/20 stroke-primary" />
                 <a
                   href={fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-2 text-sm text-indigo-300 hover:underline"
+                  className="ml-2 text-sm text-link hover:underline"
                 >
                   PDF File
                 </a>
               </div>
             )}
+            {isVoiceUpdate && (
+              <div className="mt-1 flex max-w-sm items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><FileIcon className="h-4 w-4" /></span>
+                <audio className="h-9 min-w-0 flex-1" controls preload="metadata" src={fileUrl || undefined} aria-label={`Voice update from ${member.profile.name}`} />
+              </div>
+            )}
             {!fileUrl && !isEditing && (
               <p className={cn(
-                "text-sm leading-6 text-zinc-200",
-                deleted && "mt-1 text-xs italic text-zinc-400"
+                "whitespace-pre-wrap break-words text-sm leading-6 text-foreground/90",
+                deleted && "mt-1 text-xs italic text-muted-foreground"
               )}>
                 {content}
                 {isUpdated && !deleted && (
-                  <span className="mx-2 text-[10px] text-zinc-500">
+                  <span className="mx-2 text-[10px] text-muted-foreground/70">
                     (edited)
                   </span>
                 )}
@@ -291,7 +313,7 @@ export const ChatItem = ({
                             <div className="relative w-full">
                               <Input
                                 disabled={isLoading}
-                                className="border-white/5 bg-surface p-2.5 text-sm text-white focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className="border-border bg-input p-2.5 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                                 placeholder="Edited message"
                                 {...field}
                               />
@@ -309,7 +331,7 @@ export const ChatItem = ({
                     {form.formState.errors.root.message}
                   </p>
                 )}
-                <span className="mt-1 text-[10px] text-zinc-400">
+                <span className="mt-1 text-[10px] text-muted-foreground">
                   Press escape to cancel, enter to save
                 </span>
               </Form>
@@ -317,7 +339,7 @@ export const ChatItem = ({
           </div>
 
           {!deleted && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mt-2 flex max-h-10 flex-wrap items-center gap-1.5 opacity-100 transition-all duration-150 sm:max-h-0 sm:overflow-hidden sm:opacity-0 sm:group-hover:max-h-10 sm:group-hover:opacity-100 sm:group-focus-within:max-h-10 sm:group-focus-within:opacity-100">
               {reactionOptions.map((emoji) => {
                 const matchCount = reactions.filter((reaction) => reaction.emoji === emoji).length;
                 const hasReacted = reactions.some((reaction) => reaction.emoji === emoji && reaction.memberId === currentMember.id);
@@ -328,7 +350,7 @@ export const ChatItem = ({
                       key={emoji}
                       type="button"
                       onClick={() => handleReaction(emoji)}
-                      className="inline-flex items-center gap-1 rounded-sm border border-white/10 px-2 py-1 text-[11px] text-zinc-300 transition hover:border-indigo-500/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-hover"
+                      className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-surface/55 px-2 py-0.5 text-[10px] text-muted-foreground transition hover:border-primary/40 hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span>{emoji}</span>
                     </button>
@@ -341,10 +363,10 @@ export const ChatItem = ({
                     type="button"
                     onClick={() => handleReaction(emoji)}
                       className={cn(
-                      "inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-hover",
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       hasReacted
-                        ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200"
-                        : "border-white/10 bg-surface text-zinc-300 hover:border-indigo-500/40"
+                        ? "border-primary/60 bg-primary/15 text-primary"
+                        : "border-border bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                     )}
                   >
                     <span>{emoji}</span>
@@ -354,17 +376,17 @@ export const ChatItem = ({
               })}
             </div>
           )}
-        </div>
+      </div>
       </div>
 
-      <div className="absolute -top-1 right-5 hidden items-center gap-x-1 rounded-xl border border-white/5 bg-surface p-1 shadow-sm group-hover:flex">
+      <div className="message-actions relative ml-auto mt-2 flex w-fit max-w-full items-center gap-x-1 rounded-xl border border-border/80 bg-card p-1 shadow-sm opacity-100 transition-all duration-200 sm:z-10 sm:shadow-lg sm:pointer-events-none sm:-translate-y-1 sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:focus-within:pointer-events-auto sm:focus-within:translate-y-0 sm:focus-within:opacity-100">
         {!deleted && (
           <ActionTooltip label="Reply">
             <button
               type="button"
               aria-label="Reply to message"
               onClick={() => onReply({ id, content, fileUrl, memberName: member.profile.name })}
-              className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Reply className="h-4 w-4" />
             </button>
@@ -375,7 +397,7 @@ export const ChatItem = ({
             type="button"
             aria-label={isCopied ? "Message link copied" : "Copy message link"}
             onClick={copyMessageLink}
-            className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {isCopied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />}
           </button>
@@ -388,7 +410,7 @@ export const ChatItem = ({
                 type="button"
                 aria-label="Edit message"
                 onClick={() => setIsEditing(true)}
-                className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <Edit className="h-4 w-4" />
               </button>
@@ -402,7 +424,7 @@ export const ChatItem = ({
                 apiUrl: `${socketUrl}/${id}`,
                 query: socketQuery,
               })}
-              className="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Trash className="h-4 w-4" />
             </button>
@@ -410,6 +432,6 @@ export const ChatItem = ({
           </>
         )}
         </div>
-    </div>
+      </div>
   )
 }

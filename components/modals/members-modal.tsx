@@ -41,7 +41,7 @@ import {
 
 const roleIconMap = {
   "GUEST": null,
-  "MODERATOR": <ShieldCheck className="h-4 w-4 ml-2 text-indigo-500" />,
+  "MODERATOR": <ShieldCheck className="h-4 w-4 ml-2 text-primary" />,
   "ADMIN": <ShieldAlert className="h-4 w-4 text-rose-500" />
 }
 
@@ -97,7 +97,7 @@ export const MembersModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white text-black overflow-hidden">
+      <DialogContent className="bg-card text-card-foreground overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
             Manage Sadasya
@@ -117,8 +117,8 @@ export const MembersModal = () => {
                   {member.profile.name}
                   {roleIconMap[member.role]}
                 </div>
-                <p className="text-xs text-zinc-500">
-                  {member.profile.email}
+                <p className="text-xs capitalize text-zinc-500">
+                  {member.role.toLowerCase()}
                 </p>
               </div>
               {server.profileId !== member.profileId && loadingId !== member.id && (

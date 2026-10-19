@@ -5,6 +5,9 @@ import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
 import { updateMessageSchema } from "@/lib/message-schema";
+import { uuidSchema } from "@/lib/query-validation";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+import { apiLogger } from "@/lib/logger";
 
 export default async function handler(
   req: NextApiRequest,
@@ -22,6 +25,16 @@ export default async function handler(
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    const parsedMessageId = uuidSchema.safeParse(messageId);
+    const parsedServerId = uuidSchema.safeParse(serverId);
+    const parsedChannelId = uuidSchema.safeParse(channelId);
+    if (!parsedMessageId.success || !parsedServerId.success || !parsedChannelId.success) {
+      return res.status(400).json({ error: "Invalid message, workspace, or room ID" });
+    }
+
+    const rateLimit = await checkRateLimit(apiLimiter, profile.id);
+    if (!rateLimit.success) return res.status(429).json({ error: "Too many requests. Please slow down." });
+
     if (!serverId) {
       return res.status(400).json({ error: "Server ID missing" });
     }
@@ -32,7 +45,7 @@ export default async function handler(
 
     const server = await db.server.findFirst({
       where: {
-        id: serverId as string,
+        id: parsedServerId.data,
         members: {
           some: {
             profileId: profile.id,
@@ -50,8 +63,8 @@ export default async function handler(
 
     const channel = await db.channel.findFirst({
       where: {
-        id: channelId as string,
-        serverId: serverId as string,
+        id: parsedChannelId.data,
+        serverId: parsedServerId.data,
       },
     });
   
@@ -67,8 +80,8 @@ export default async function handler(
 
     let message = await db.message.findFirst({
       where: {
-        id: messageId as string,
-        channelId: channelId as string,
+        id: parsedMessageId.data,
+        channelId: parsedChannelId.data,
       },
       include: {
         member: {
@@ -89,13 +102,13 @@ export default async function handler(
     const canModify = isMessageOwner || isAdmin || isModerator;
 
     if (!canModify) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: "You cannot modify this message" });
     }
 
     if (req.method === "DELETE") {
       message = await db.message.update({
         where: {
-          id: messageId as string,
+          id: parsedMessageId.data,
         },
         data: {
           fileUrl: null,
@@ -125,7 +138,7 @@ export default async function handler(
 
       message = await db.message.update({
         where: {
-          id: messageId as string,
+          id: parsedMessageId.data,
         },
         data: {
           content: result.data.content,
@@ -144,9 +157,10 @@ export default async function handler(
 
     res?.socket?.server?.io?.to(`chat:${channelId}:messages`).emit(updateKey, message);
 
+    Object.entries(getRateLimitHeaders(rateLimit)).forEach(([name, value]) => res.setHeader(name, value));
     return res.status(200).json(message);
   } catch (error) {
-    console.log("[MESSAGE_ID]", error);
+    apiLogger.error({ error, url: req.url }, "Failed to modify message");
     return res.status(500).json({ error: "Internal Error" });
   }
 }

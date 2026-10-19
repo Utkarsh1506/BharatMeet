@@ -84,15 +84,15 @@ export const InitialModal = () => {
 
   return (
     <Dialog open>
-      <DialogContent className="overflow-hidden border border-white/10 bg-surface p-0 text-white shadow-2xl shadow-indigo-950/30 sm:max-w-xl">
-        <DialogHeader className="border-b border-white/10 bg-gradient-to-r from-indigo-500/20 via-violet-500/10 to-cyan-500/20 px-6 pb-6 pt-8">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 shadow-lg shadow-indigo-500/30">
-            <Sparkles className="h-5 w-5 text-white" />
+      <DialogContent className="overflow-hidden rounded-[1.75rem] border-border bg-card p-0 text-card-foreground shadow-2xl shadow-black/20 sm:max-w-xl">
+        <DialogHeader className="border-b border-border/70 bg-gradient-to-br from-primary/15 via-transparent to-emerald-500/10 px-6 pb-6 pt-8">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15 text-primary shadow-lg shadow-primary/10">
+            <Sparkles className="h-5 w-5" />
           </div>
-          <DialogTitle className="text-center text-2xl font-bold tracking-tight text-white">
+          <DialogTitle className="text-center text-2xl font-bold tracking-tight text-foreground">
             Build your first workspace
           </DialogTitle>
-          <DialogDescription className="text-center text-sm text-zinc-300">
+          <DialogDescription className="text-center text-sm text-muted-foreground">
             Start a focused space for your team, community, or next big idea.
           </DialogDescription>
         </DialogHeader>
@@ -122,7 +122,7 @@ export const InitialModal = () => {
               </div>
 
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                <p className="section-kicker">
                   Quick picks
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -131,7 +131,7 @@ export const InitialModal = () => {
                       key={template}
                       type="button"
                       onClick={() => form.setValue("name", template, { shouldValidate: true })}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-indigo-400/60 hover:bg-indigo-500/10"
+                      className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground/80 transition duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/10 hover:text-foreground"
                     >
                       {template}
                     </button>
@@ -144,13 +144,13 @@ export const InitialModal = () => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    <FormLabel className="section-kicker">
                       Workspace name
                     </FormLabel>
                     <FormControl>
                       <Input
                         disabled={isLoading}
-                        className="h-11 border border-white/10 bg-surface-hover text-white placeholder:text-zinc-500 focus-visible:ring-indigo-500"
+                        className="h-12 rounded-xl border-border bg-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                         placeholder="e.g. Product Builders"
                         {...field}
                       />
@@ -161,13 +161,13 @@ export const InitialModal = () => {
               />
 
               {form.formState.errors.root?.message && (
-                <p role="alert" className="text-sm text-rose-300">
+                  <p role="alert" className="text-sm text-destructive">
                   {form.formState.errors.root.message}
                 </p>
               )}
             </div>
 
-            <DialogFooter className="border-t border-white/10 bg-sidebar px-6 py-4">
+            <DialogFooter className="border-t border-border/70 bg-sidebar px-6 py-4">
               <Button className="w-full sm:w-auto" variant="primary" disabled={isLoading}>
                 {isLoading ? "Creating workspace..." : "Create workspace"}
               </Button>

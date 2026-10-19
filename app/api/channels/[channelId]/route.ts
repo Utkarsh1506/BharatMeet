@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
+import { ChannelType, MemberRole } from "@prisma/client";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
+import { z } from "zod";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+import { sanitizeName } from "@/lib/sanitize";
+import { uuidSchema } from "@/lib/query-validation";
+import { apiLogger } from "@/lib/logger";
+
+const updateChannelSchema = z.object({
+  name: z.string().trim().min(1).max(80).transform(sanitizeName).pipe(z.string().min(1).max(80)),
+  type: z.nativeEnum(ChannelType),
+});
 
 export async function DELETE(
   req: Request,
@@ -15,16 +26,30 @@ export async function DELETE(
     const serverId = searchParams.get("serverId");
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return ApiErrors.unauthorized();
     }
 
-    if (!serverId || !params.channelId) {
-      return new NextResponse("Server ID or Channel ID missing", { status: 400 });
-    }
+    const parsedServerId = uuidSchema.safeParse(serverId);
+    const parsedChannelId = uuidSchema.safeParse(params.channelId);
+    if (!parsedServerId.success || !parsedChannelId.success) return ApiErrors.badRequest("Invalid workspace or room ID");
+
+    const limit = await checkRateLimit(apiLimiter, profile.id);
+    if (!limit.success) return ApiErrors.rateLimitExceeded(undefined, getRateLimitHeaders(limit));
+
+    const channel = await db.channel.findFirst({
+      where: {
+        id: parsedChannelId.data,
+        serverId: parsedServerId.data,
+        server: { members: { some: { profileId: profile.id, role: { in: [MemberRole.ADMIN, MemberRole.MODERATOR] } } } },
+      },
+      select: { id: true, name: true },
+    });
+    if (!channel) return ApiErrors.notFound("Room not found");
+    if (channel.name.toLowerCase() === "general") return ApiErrors.badRequest("The general room cannot be deleted");
 
     const server = await db.server.update({
       where: {
-        id: serverId,
+        id: parsedServerId.data,
         members: {
           some: {
             profileId: profile.id,
@@ -37,19 +62,16 @@ export async function DELETE(
       data: {
         channels: {
           delete: {
-            id: params.channelId,
-            name: {
-              not: "general",
-            },
+            id: parsedChannelId.data,
           },
         },
       },
     });
 
-    return new NextResponse(JSON.stringify(server), { status: 200 });
+    return NextResponse.json(server, { headers: getRateLimitHeaders(limit) });
   } catch (error) {
-    console.error("[CHANNEL_ID_DELETE]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    apiLogger.error({ error }, "Failed to delete room");
+    return handleApiError(error);
   }
 }
 
@@ -59,26 +81,43 @@ export async function PATCH(
 ) {
   try {
     const profile = await currentProfile();
-    const { name, type } = await req.json();
     const { searchParams } = new URL(req.url);
 
     const serverId = searchParams.get("serverId");
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return ApiErrors.unauthorized();
     }
 
-    if (!serverId || !params.channelId) {
-      return new NextResponse("Server ID or Channel ID missing", { status: 400 });
+    const parsedServerId = uuidSchema.safeParse(serverId);
+    const parsedChannelId = uuidSchema.safeParse(params.channelId);
+    if (!parsedServerId.success || !parsedChannelId.success) return ApiErrors.badRequest("Invalid workspace or room ID");
+
+    const limit = await checkRateLimit(apiLimiter, profile.id);
+    if (!limit.success) return ApiErrors.rateLimitExceeded(undefined, getRateLimitHeaders(limit));
+
+    const body = await req.json().catch(() => null);
+    const result = updateChannelSchema.safeParse(body);
+    if (!result.success) return handleApiError(result.error);
+
+    if (result.data.name.toLowerCase() === "general") {
+      return ApiErrors.badRequest("Name cannot be 'general'");
     }
 
-    if (name === "general") {
-      return new NextResponse("Name cannot be 'general'", { status: 400 });
-    }
+    const channel = await db.channel.findFirst({
+      where: {
+        id: parsedChannelId.data,
+        serverId: parsedServerId.data,
+        server: { members: { some: { profileId: profile.id, role: { in: [MemberRole.ADMIN, MemberRole.MODERATOR] } } } },
+      },
+      select: { id: true, name: true },
+    });
+    if (!channel) return ApiErrors.notFound("Room not found");
+    if (channel.name.toLowerCase() === "general") return ApiErrors.badRequest("The general room cannot be changed");
 
     const server = await db.server.update({
       where: {
-        id: serverId,
+        id: parsedServerId.data,
         members: {
           some: {
             profileId: profile.id,
@@ -92,23 +131,20 @@ export async function PATCH(
         channels: {
           update: {
             where: {
-              id: params.channelId,
-              name: {
-                not: "general",
-              },
+              id: parsedChannelId.data,
             },
             data: {
-              name,
-              type,
+              name: result.data.name,
+              type: result.data.type,
             },
           },
         },
       },
     });
 
-    return new NextResponse(JSON.stringify(server), { status: 200 });
+    return NextResponse.json(server, { headers: getRateLimitHeaders(limit) });
   } catch (error) {
-    console.error("[CHANNEL_ID_PATCH]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    apiLogger.error({ error }, "Failed to update room");
+    return handleApiError(error);
   }
 }

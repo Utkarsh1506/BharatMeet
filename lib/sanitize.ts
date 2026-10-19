@@ -109,9 +109,10 @@ export function sanitizeFileUrl(url: string | null | undefined): string | null {
       return null;
     }
 
-    // Allow UploadThing CDN
-    if (parsed.hostname.includes("uploadthing.com") ||
-        parsed.hostname.includes("utfs.io")) {
+    // Match trusted hostnames exactly. Substring checks also trust domains
+    // such as uploadthing.com.attacker.example.
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === "uploadthing.com" || hostname === "utfs.io") {
       return url;
     }
 

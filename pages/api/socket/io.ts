@@ -7,6 +7,8 @@ import { NextApiResponseServerIo } from "@/types";
 import { db } from "@/lib/db";
 import { checkRateLimit, socketEventLimiter } from "@/lib/rate-limit";
 import { socketLogger, logSocketEvent } from "@/lib/logger";
+import { uuidSchema } from "@/lib/query-validation";
+import { env, isDevelopment } from "@/lib/env";
 
 const PRESENCE_STATUSES = ["online", "away", "dnd", "offline"] as const;
 type PresenceStatus = typeof PRESENCE_STATUSES[number];
@@ -31,9 +33,10 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
     const httpServer: NetServer = res.socket.server as any;
 
     // Configure CORS for Socket.IO
-    const allowedOrigins = process.env.NEXT_PUBLIC_SITE_URL
-      ? [process.env.NEXT_PUBLIC_SITE_URL, "http://localhost:3000", "https://localhost:3000"]
-      : ["http://localhost:3000", "https://localhost:3000"];
+    const allowedOrigins = [
+      env.NEXT_PUBLIC_SITE_URL ? new URL(env.NEXT_PUBLIC_SITE_URL).origin : undefined,
+      ...(isDevelopment ? ["http://localhost:3000", "https://localhost:3000"] : []),
+    ].filter((origin): origin is string => Boolean(origin));
 
     const io = new ServerIO(httpServer, {
       path: path,
@@ -100,9 +103,13 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           : "online";
         socket.emit("presence:self", { status: socket.data.presenceStatus });
         publishPresence();
-      }).catch(() => socket.disconnect(true));
+      }).catch((error) => {
+        socketLogger.error({ error, userId: socket.data.userId }, "Failed to load socket profile");
+        socket.disconnect(true);
+      });
 
       socket.on("presence:set-status", async (status: unknown) => {
+        if (typeof socket.data.profileId !== "string") return;
         // Rate limit presence updates
         const rateLimitResult = await checkRateLimit(
           socketEventLimiter,
@@ -119,22 +126,42 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
 
         const nextStatus = status as PresenceStatus;
         socket.data.presenceStatus = nextStatus;
-        await db.profile.update({
-          where: { id: socket.data.profileId },
-          data: { presenceStatus: nextStatus },
-        });
-        publishPresence();
+        try {
+          await db.profile.update({
+            where: { id: socket.data.profileId },
+            data: { presenceStatus: nextStatus },
+          });
+          publishPresence();
+        } catch (error) {
+          socketLogger.error({ error, profileId: socket.data.profileId }, "Failed to update presence");
+        }
       });
 
       socket.on("disconnect", () => {
         publishPresence(socket.id);
       });
 
-      socket.on("join-chat", async ({ chatId, type }) => {
-        if (typeof chatId !== "string" || !["channel", "conversation"].includes(type)) {
+      socket.on("join-chat", async (payload: unknown) => {
+        if (!payload || typeof payload !== "object") return;
+        const { chatId, type } = payload as { chatId?: unknown; type?: unknown };
+        if (
+          typeof chatId !== "string" ||
+          !uuidSchema.safeParse(chatId).success ||
+          (type !== "channel" && type !== "conversation")
+        ) {
           return;
         }
 
+        const joinLimit = await checkRateLimit(
+          socketEventLimiter,
+          `${socket.data.userId}:join-chat`,
+        );
+        if (!joinLimit.success) {
+          socket.emit("error", { message: "Too many room join requests" });
+          return;
+        }
+
+        try {
         const profile = await db.profile.findUnique({
           where: { userId: socket.data.userId },
           select: { id: true, name: true },
@@ -167,9 +194,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           socket.data.profileName = profile.name;
           socket.join(`chat:${chatId}:messages`);
         }
+        } catch (error) {
+          socketLogger.error({ error, chatId, userId: socket.data.userId }, "Failed to join chat room");
+        }
       });
 
-      socket.on("typing", async ({ chatId, isTyping }) => {
+      socket.on("typing", async (payload: unknown) => {
+        if (!payload || typeof payload !== "object" || typeof socket.data.profileId !== "string") return;
+        const { chatId, isTyping } = payload as { chatId?: unknown; isTyping?: unknown };
         // Rate limit typing events
         const rateLimitResult = await checkRateLimit(
           socketEventLimiter,
@@ -181,6 +213,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
 
         if (
           typeof chatId !== "string" ||
+          !uuidSchema.safeParse(chatId).success ||
           typeof isTyping !== "boolean" ||
           !socket.rooms.has(`chat:${chatId}:messages`)
         ) {
@@ -194,8 +227,10 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         });
       });
 
-      socket.on("leave-chat", ({ chatId }) => {
-        if (typeof chatId === "string") {
+      socket.on("leave-chat", (payload: unknown) => {
+        if (payload && typeof payload === "object" && "chatId" in payload && typeof payload.chatId === "string") {
+          const { chatId } = payload;
+          if (!uuidSchema.safeParse(chatId).success) return;
           socket.leave(`chat:${chatId}:messages`);
         }
       });

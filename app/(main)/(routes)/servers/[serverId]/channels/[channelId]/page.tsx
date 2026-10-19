@@ -7,6 +7,7 @@ import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { MediaRoom } from "@/components/media-room";
+import { RoomCompanion } from "@/components/chat/room-companion";
 import { db } from "@/lib/db";
 
 interface ChannelIdPageProps {
@@ -38,12 +39,31 @@ const ChannelIdPage = async ({
     }
   });
 
-  if (!channel || !member) {
+  const server = await db.server.findFirst({
+    where: {
+      id: params.serverId,
+      members: { some: { profileId: profile.id } },
+    },
+    include: {
+      channels: { select: { id: true, type: true } },
+      members: {
+        include: {
+          profile: {
+            select: { id: true, name: true, imageUrl: true, presenceStatus: true },
+          },
+        },
+        orderBy: { role: "asc" },
+      },
+    },
+  });
+
+  if (!channel || !member || !server || channel.serverId !== server.id) {
     redirect("/");
   }
 
   return ( 
-    <div className="flex h-full flex-col bg-surface-hover text-white">
+    <div className="meeting-canvas flex h-full min-h-0 min-w-0 bg-background text-foreground">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ChatHeader
         name={channel.name}
         serverId={channel.serverId}
@@ -69,6 +89,7 @@ const ChannelIdPage = async ({
             name={channel.name}
             type="channel"
             apiUrl="/api/socket/messages"
+            enableVoiceNotes
             query={{
               channelId: channel.id,
               serverId: channel.serverId,
@@ -79,6 +100,10 @@ const ChannelIdPage = async ({
       {channel.type === ChannelType.AUDIO && (
         <MediaRoom
           chatId={channel.id}
+          serverId={server.id}
+          channelName={channel.name}
+          member={member}
+          members={server.members}
           video={false}
           audio={true}
         />
@@ -86,8 +111,21 @@ const ChannelIdPage = async ({
       {channel.type === ChannelType.VIDEO && (
         <MediaRoom
           chatId={channel.id}
+          serverId={server.id}
+          channelName={channel.name}
+          member={member}
+          members={server.members}
           video={true}
           audio={true}
+        />
+      )}
+      </div>
+      {channel.type === ChannelType.TEXT && (
+        <RoomCompanion
+          roomName={channel.name}
+          members={server.members}
+          server={server}
+          voiceChannelId={server.channels.find((room) => room.type === ChannelType.AUDIO)?.id}
         />
       )}
     </div>

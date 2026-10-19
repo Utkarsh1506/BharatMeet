@@ -62,12 +62,12 @@ LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 NEXT_PUBLIC_LIVEKIT_URL=
 
-# Optional: Rate limiting (recommended for production)
+# Required for production; development can use the in-memory fallback
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 ```
 
-**Note**: The application includes rate limiting to prevent abuse. In development, it uses an in-memory fallback. For production, configure Upstash Redis for distributed rate limiting across instances.
+**Note**: The application includes rate limiting to prevent abuse. It uses an in-memory fallback only in development. Production startup requires Upstash Redis credentials and `NEXT_PUBLIC_SITE_URL`, so rate limits and realtime origin checks remain consistent across instances.
 
 ### Setup Prisma
 

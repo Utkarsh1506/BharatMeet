@@ -64,7 +64,7 @@ const MemberIdPage = async ({
   }
 
   return ( 
-    <div className="bg-white dark:bg-surface-hover flex flex-col h-full">
+    <div className="meeting-canvas flex h-full min-h-0 min-w-0 flex-col bg-background text-foreground">
       <ChatHeader
         imageUrl={otherMember.profile.imageUrl}
         name={otherMember.profile.name}

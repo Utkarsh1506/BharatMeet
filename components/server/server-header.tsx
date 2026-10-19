@@ -41,19 +41,19 @@ export const ServerHeader = ({
         className="focus:outline-none"
         asChild
       >
-        <button type="button" className="flex h-14 w-full items-center gap-3 rounded-xl border border-white/5 bg-surface-hover px-3 text-left text-base font-semibold text-white transition hover:bg-active focus:outline-none">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 text-[0.6rem] font-black tracking-[0.22em] text-white ring-1 ring-white/10">
+        <button type="button" className="flex h-14 w-full items-center gap-3 rounded-2xl border border-border/70 bg-surface px-3 text-left text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/30 hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-amber-500 text-[0.62rem] font-black tracking-[0.14em] text-primary-foreground shadow-md shadow-primary/20">
             {server.name.slice(0, 2).toUpperCase()}
           </div>
           <span className="truncate">{server.name}</span>
-          <ChevronDown className="ml-auto h-4 w-4 text-slate-300" />
+          <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 space-y-[2px] text-xs font-medium text-black dark:text-neutral-300">
+      <DropdownMenuContent className="w-56 space-y-[2px] rounded-xl border-border bg-card text-xs font-medium text-foreground">
         {isModerator && (
           <DropdownMenuItem
             onClick={() => onOpen("invite", { server })}
-            className="cursor-pointer px-3 py-2 text-sm text-indigo-600 dark:text-indigo-300"
+            className="cursor-pointer px-3 py-2 text-sm text-primary"
           >
             Invite People
             <UserPlus className="ml-auto h-4 w-4" />

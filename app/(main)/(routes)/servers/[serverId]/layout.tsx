@@ -1,9 +1,11 @@
 import { redirectToSignIn } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
+import { MemberRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { currentProfile } from "@/lib/current-profile";
-import { ServerSidebar } from "@/components/server/server-sidebar";
+import { ServerNavigationProvider } from "@/components/providers/server-navigation-provider";
+import { ServerWorkspaceFrame } from "@/components/server/server-workspace-frame";
 
 const ServerIdLayout = async ({
   children,
@@ -18,7 +20,7 @@ const ServerIdLayout = async ({
     return redirectToSignIn();
   }
 
-  const server = await db.server.findUnique({
+  const server = await db.server.findFirst({
     where: {
       id: params.serverId,
       members: {
@@ -26,23 +28,36 @@ const ServerIdLayout = async ({
           profileId: profile.id
         }
       }
-    }
+    },
+    include: {
+      channels: { orderBy: { createdAt: "asc" } },
+      members: {
+        include: {
+          profile: {
+            select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true },
+          },
+        },
+        orderBy: { role: "asc" },
+      },
+    },
   });
 
   if (!server) {
     return redirect("/");
   }
 
+  const currentMember = server.members.find((member) => member.profileId === profile.id);
+
+  if (!currentMember) {
+    return redirect("/");
+  }
+
   return (
-    <div className="h-full">
-      <div
-      className="hidden md:flex h-full w-60 z-20 flex-col fixed inset-y-0 md:left-[72px]">
-        <ServerSidebar serverId={params.serverId} />
-      </div>
-      <main className="h-full md:pl-60">
+    <ServerNavigationProvider server={server} profileId={profile.id} role={currentMember.role}>
+      <ServerWorkspaceFrame server={server} profileId={profile.id} role={currentMember.role as MemberRole}>
         {children}
-      </main>
-    </div>
+      </ServerWorkspaceFrame>
+    </ServerNavigationProvider>
    );
 }
  

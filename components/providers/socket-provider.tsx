@@ -77,7 +77,7 @@ export const SocketProvider = ({
       isConnecting.current = true;
 
       try {
-        const token = await getToken();
+        const token = await getToken({ skipCache: true });
 
         if (!token || !isMounted) {
           isConnecting.current = false;
@@ -87,8 +87,14 @@ export const SocketProvider = ({
         socketInstance = ClientIO(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin, {
           path: "/api/socket/io",
           addTrailingSlash: false,
-          transports: ["polling"],
-          auth: { token },
+          // Start with HTTP long-polling and upgrade to WebSocket when available.
+          // Socket.IO invokes this for each connection attempt. Fetching a
+          // fresh Clerk token here avoids reusing an expired token on reconnect.
+          auth: (callback) => {
+            void getToken({ skipCache: true })
+              .then((freshToken) => callback({ token: freshToken || "" }))
+              .catch(() => callback({ token: "" }));
+          },
           reconnection: true,
           reconnectionDelay: 1000,
           reconnectionDelayMax: 5000,

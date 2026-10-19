@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
 import { sanitizeName } from "@/lib/sanitize";
 import { apiLogger } from "@/lib/logger";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
+import { uuidSchema } from "@/lib/query-validation";
 
 const channelSchema = z.object({
   name: z
@@ -15,7 +17,8 @@ const channelSchema = z.object({
     .trim()
     .min(1, "Channel name is required.")
     .max(80)
-    .transform((val) => sanitizeName(val)),
+    .transform((val) => sanitizeName(val))
+    .pipe(z.string().min(1).max(80)),
   type: z.nativeEnum(ChannelType),
 });
 
@@ -26,13 +29,12 @@ export async function POST(
 
   try {
     const profile = await currentProfile();
-    const body = await req.json();
     const { searchParams } = new URL(req.url);
 
     serverId = searchParams.get("serverId");
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return ApiErrors.unauthorized();
     }
 
     // Apply rate limiting
@@ -48,24 +50,27 @@ export async function POST(
     }
 
     if (!serverId) {
-      return new NextResponse("Server ID missing", { status: 400 });
+      return ApiErrors.badRequest("Server ID missing");
     }
+
+    const parsedServerId = uuidSchema.safeParse(serverId);
+    if (!parsedServerId.success) return ApiErrors.badRequest("Invalid workspace ID");
+
+    const body = await req.json().catch(() => null);
 
     const result = channelSchema.safeParse(body);
 
     if (!result.success) {
-      return new NextResponse(result.error.issues[0]?.message || "Invalid channel data", {
-        status: 400,
-      });
+      return handleApiError(result.error);
     }
 
     if (result.data.name.toLowerCase() === "general") {
-      return new NextResponse("Name cannot be 'general'", { status: 400 });
+      return ApiErrors.badRequest("Name cannot be 'general'");
     }
 
     const server = await db.server.update({
       where: {
-        id: serverId,
+        id: parsedServerId.data,
         members: {
           some: {
             profileId: profile.id,
@@ -86,9 +91,9 @@ export async function POST(
       }
     });
 
-    return NextResponse.json(server);
+    return NextResponse.json(server, { headers: getRateLimitHeaders(rateLimitResult) });
   } catch (error) {
     apiLogger.error({ error, serverId }, "Failed to create channel");
-    return new NextResponse("Internal Error", { status: 500 });
+    return handleApiError(error);
   }
 }

@@ -1,8 +1,62 @@
-import { Ratelimit } from "@upstash/ratelimit";
+import { Ratelimit, type Duration } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env, hasRateLimiting } from "./env";
 
-// Create a Redis client - falls back to in-memory for development
+export interface RateLimitResult {
+  success: boolean;
+  limit?: number;
+  remaining?: number;
+  reset?: number;
+}
+
+export interface RateLimiter {
+  limit(identifier: string): Promise<RateLimitResult>;
+}
+
+const memoryBuckets = new Map<string, number[]>();
+const memoryBucketExpiry = new Map<string, number>();
+
+export const createInMemoryRateLimiter = (prefix: string, maxRequests: number, windowMs: number): RateLimiter => ({
+  async limit(identifier) {
+    const now = Date.now();
+    const key = `${prefix}:${identifier}`;
+    const active = (memoryBuckets.get(key) ?? []).filter((timestamp) => timestamp > now - windowMs);
+    const success = active.length < maxRequests;
+
+    if (success) active.push(now);
+    memoryBuckets.set(key, active);
+    memoryBucketExpiry.set(key, active.length ? active[0] + windowMs : now + windowMs);
+
+    if (memoryBuckets.size > 10_000) {
+      memoryBucketExpiry.forEach((expiresAt, bucketKey) => {
+        if (expiresAt <= now) {
+          memoryBuckets.delete(bucketKey);
+          memoryBucketExpiry.delete(bucketKey);
+        }
+      });
+    }
+
+    return {
+      success,
+      limit: maxRequests,
+      remaining: Math.max(0, maxRequests - active.length),
+      reset: active.length ? active[0] + windowMs : now + windowMs,
+    };
+  },
+});
+
+const createLimiter = (prefix: string, maxRequests: number, window: Duration, windowMs: number): RateLimiter => {
+  if (!redis) return createInMemoryRateLimiter(prefix, maxRequests, windowMs);
+
+  return new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(maxRequests, window),
+    analytics: true,
+    prefix,
+  });
+};
+
+// Use Redis when configured and a per-process sliding window otherwise.
 const redis = hasRateLimiting
   ? new Redis({
       url: env.UPSTASH_REDIS_REST_URL!,
@@ -11,54 +65,19 @@ const redis = hasRateLimiting
   : undefined;
 
 // Rate limiter for general API requests - 20 requests per 10 seconds
-export const apiLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(20, "10 s"),
-      analytics: true,
-      prefix: "@bharatmeet/api",
-    })
-  : null;
+export const apiLimiter = createLimiter("@bharatmeet/api", 20, "10 s", 10_000);
 
 // Rate limiter for message sending - 10 messages per 10 seconds
-export const messageLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(10, "10 s"),
-      analytics: true,
-      prefix: "@bharatmeet/message",
-    })
-  : null;
+export const messageLimiter = createLimiter("@bharatmeet/message", 10, "10 s", 10_000);
 
 // Rate limiter for server creation - 3 servers per hour
-export const serverCreationLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(3, "1 h"),
-      analytics: true,
-      prefix: "@bharatmeet/server",
-    })
-  : null;
+export const serverCreationLimiter = createLimiter("@bharatmeet/server", 3, "1 h", 3_600_000);
 
 // Rate limiter for Socket.IO events - 30 events per 10 seconds
-export const socketEventLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(30, "10 s"),
-      analytics: true,
-      prefix: "@bharatmeet/socket",
-    })
-  : null;
+export const socketEventLimiter = createLimiter("@bharatmeet/socket", 30, "10 s", 10_000);
 
 // Rate limiter for authentication - 5 attempts per minute
-export const authLimiter = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, "1 m"),
-      analytics: true,
-      prefix: "@bharatmeet/auth",
-    })
-  : null;
+export const authLimiter = createLimiter("@bharatmeet/auth", 5, "1 m", 60_000);
 
 /**
  * Helper function to apply rate limiting
@@ -67,15 +86,10 @@ export const authLimiter = redis
  * @returns Object with success status and remaining requests
  */
 export async function checkRateLimit(
-  limiter: Ratelimit | null,
+  limiter: RateLimiter | null,
   identifier: string
-): Promise<{
-  success: boolean;
-  limit?: number;
-  remaining?: number;
-  reset?: number;
-}> {
-  // If no Redis configured (development), allow all requests
+): Promise<RateLimitResult> {
+  // A null limiter is reserved for explicitly unmetered operations.
   if (!limiter) {
     return { success: true };
   }

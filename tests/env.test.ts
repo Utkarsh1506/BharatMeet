@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { env, isProduction, isDevelopment } from "../lib/env";
+import { env, envSchema, isProduction, isDevelopment } from "../lib/env";
 
 describe("Environment Validation", () => {
   describe("env object", () => {
@@ -56,5 +56,25 @@ describe("Environment Validation", () => {
       // Should not throw if undefined
       expect(() => env.NEXT_PUBLIC_SITE_URL).not.toThrow();
     });
+  });
+
+  it("requires production Clerk, realtime, and distributed rate-limit configuration", () => {
+    const result = envSchema.safeParse({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://db.example/app",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_live_example",
+      CLERK_SECRET_KEY: "sk_live_example",
+      UPLOADTHING_SECRET: "upload_secret",
+      UPLOADTHING_APP_ID: "upload_app",
+      LIVEKIT_API_KEY: "livekit_key",
+      LIVEKIT_API_SECRET: "livekit_secret",
+      NEXT_PUBLIC_LIVEKIT_URL: "wss://meet.example",
+      NEXT_PUBLIC_SITE_URL: "https://meet.example",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "UPSTASH_REDIS_REST_URL")).toBe(true);
+    }
   });
 });

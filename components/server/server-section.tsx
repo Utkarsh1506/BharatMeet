@@ -35,7 +35,7 @@ export const ServerSection = ({
             type="button"
             aria-label="Create meeting"
             onClick={() => onOpen("createChannel", { channelType })}
-            className="text-zinc-400 transition hover:text-zinc-200"
+            className="rounded-md p-1 text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -47,7 +47,7 @@ export const ServerSection = ({
             type="button"
             aria-label="Manage members"
             onClick={() => onOpen("members", { server })}
-            className="text-zinc-400 transition hover:text-zinc-200"
+            className="rounded-md p-1 text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
             <Settings className="h-4 w-4" />
           </button>

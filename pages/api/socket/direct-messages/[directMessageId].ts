@@ -4,6 +4,9 @@ import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
 import { updateMessageSchema } from "@/lib/message-schema";
+import { uuidSchema } from "@/lib/query-validation";
+import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
+import { apiLogger } from "@/lib/logger";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,13 +24,22 @@ export default async function handler(
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    const parsedMessageId = uuidSchema.safeParse(directMessageId);
+    const parsedConversationId = uuidSchema.safeParse(conversationId);
+    if (!parsedMessageId.success || !parsedConversationId.success) {
+      return res.status(400).json({ error: "Invalid message or conversation ID" });
+    }
+
+    const rateLimit = await checkRateLimit(apiLimiter, profile.id);
+    if (!rateLimit.success) return res.status(429).json({ error: "Too many requests. Please slow down." });
+
     if (!conversationId) {
       return res.status(400).json({ error: "Conversation ID missing" });
     }
 
     const conversation = await db.conversation.findFirst({
       where: {
-        id: conversationId as string,
+        id: parsedConversationId.data,
         OR: [
           {
             memberOne: {
@@ -67,8 +79,8 @@ export default async function handler(
 
     let directMessage = await db.directMessage.findFirst({
       where: {
-        id: directMessageId as string,
-        conversationId: conversationId as string,
+        id: parsedMessageId.data,
+        conversationId: parsedConversationId.data,
       },
       include: {
         member: {
@@ -86,13 +98,13 @@ export default async function handler(
     const isMessageOwner = directMessage.memberId === member.id;
 
     if (!isMessageOwner) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: "You cannot modify this message" });
     }
 
     if (req.method === "DELETE") {
       directMessage = await db.directMessage.update({
         where: {
-          id: directMessageId as string,
+          id: parsedMessageId.data,
         },
         data: {
           fileUrl: null,
@@ -118,7 +130,7 @@ export default async function handler(
 
       directMessage = await db.directMessage.update({
         where: {
-          id: directMessageId as string,
+          id: parsedMessageId.data,
         },
         data: {
           content: result.data.content,
@@ -137,9 +149,10 @@ export default async function handler(
 
     res?.socket?.server?.io?.to(`chat:${conversationId}:messages`).emit(updateKey, directMessage);
 
+    Object.entries(getRateLimitHeaders(rateLimit)).forEach(([name, value]) => res.setHeader(name, value));
     return res.status(200).json(directMessage);
   } catch (error) {
-    console.log("[MESSAGE_ID]", error);
+    apiLogger.error({ error, url: req.url }, "Failed to modify direct message");
     return res.status(500).json({ error: "Internal Error" });
   }
 }

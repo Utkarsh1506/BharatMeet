@@ -6,7 +6,7 @@ import {
   MemberRole,
   Server
 } from "@prisma/client";
-import { CircleEllipsis, Edit, Lock, Mic, Trash, Video } from "lucide-react";
+import { Edit, Hash, Lock, Mic, Trash, Video } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ interface ServerChannelProps {
 }
 
 const iconMap = {
-  [ChannelType.TEXT]: CircleEllipsis,
+  [ChannelType.TEXT]: Hash,
   [ChannelType.AUDIO]: Mic,
   [ChannelType.VIDEO]: Video,
 }
@@ -49,14 +49,14 @@ export const ServerChannel = ({
     <button
       onClick={onClick}
       className={cn(
-        "group mb-1 flex w-full items-center gap-x-2 rounded-lg px-2 py-2 transition-colors hover:bg-white/5",
-        params?.channelId === channel.id && "bg-active text-white"
+        "group mb-1 flex w-full items-center gap-x-2 rounded-xl px-2.5 py-2.5 transition-all duration-200 hover:translate-x-0.5 hover:bg-surface-hover",
+        params?.channelId === channel.id && "bg-primary/10 text-primary ring-1 ring-primary/15"
       )}
     >
-      <Icon className={cn("h-4 w-4 flex-shrink-0", params?.channelId === channel.id ? "text-white" : "text-zinc-400")} />
+      <Icon className={cn("h-4 w-4 flex-shrink-0", params?.channelId === channel.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
       <p className={cn(
         "line-clamp-1 text-sm font-medium transition-colors",
-        params?.channelId === channel.id ? "text-white" : "text-zinc-300 group-hover:text-white"
+        params?.channelId === channel.id ? "text-primary" : "text-foreground/75 group-hover:text-foreground"
       )}>
         {channel.name}
       </p>

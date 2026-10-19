@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { checkRateLimit } from "../lib/rate-limit";
+import { checkRateLimit, createInMemoryRateLimiter } from "../lib/rate-limit";
 
 describe("Rate Limiting", () => {
   describe("checkRateLimit", () => {
-    it("should allow requests when no Redis configured (development)", async () => {
-      // In development/test without Redis, all requests should be allowed
+    it("allows requests when no limiter is explicitly provided", async () => {
       const result = await checkRateLimit(null, "test-user-id");
 
       expect(result.success).toBe(true);
@@ -28,11 +27,22 @@ describe("Rate Limiting", () => {
     });
   });
 
+  describe("in-memory fallback", () => {
+    it("enforces the configured request limit per identifier", async () => {
+      const limiter = createInMemoryRateLimiter(`test-${Date.now()}`, 2, 60_000);
+
+      expect((await limiter.limit("user-a")).success).toBe(true);
+      expect((await limiter.limit("user-a")).success).toBe(true);
+      expect((await limiter.limit("user-a")).success).toBe(false);
+      expect((await limiter.limit("user-b")).success).toBe(true);
+    });
+  });
+
   describe("Rate limit response structure", () => {
     it("should include limit information when available", async () => {
       const result = await checkRateLimit(null, "test-user");
 
-      // In development mode without Redis, these may be undefined
+      // Explicitly unmetered calls do not include rate limit metadata.
       if (result.limit) {
         expect(typeof result.limit).toBe("number");
       }

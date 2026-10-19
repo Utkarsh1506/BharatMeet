@@ -6,8 +6,9 @@ import { z } from "zod";
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { checkRateLimit, serverCreationLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
-import { sanitizeName, sanitizeUrl } from "@/lib/sanitize";
+import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize";
 import { apiLogger } from "@/lib/logger";
+import { ApiErrors, handleApiError } from "@/lib/api-error";
 
 const serverSchema = z.object({
   name: z
@@ -15,21 +16,50 @@ const serverSchema = z.object({
     .trim()
     .min(2, "Server name must be at least 2 characters.")
     .max(80)
-    .transform((val) => sanitizeName(val)),
+    .transform((val) => sanitizeName(val))
+    .pipe(z.string().min(2).max(80)),
   imageUrl: z
     .string()
     .url("A valid server image is required.")
     .max(2048)
-    .transform((val) => sanitizeUrl(val)),
+    .refine((value) => sanitizeFileUrl(value) !== null, "Use an image uploaded through UploadThing"),
 });
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const body = await req.json();
     const profile = await currentProfile();
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    return ApiErrors.unauthorized();
+    }
+
+    const servers = await db.server.findMany({
+      where: {
+        members: {
+          some: { profileId: profile.id },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ servers });
+  } catch (error) {
+    apiLogger.error({ error }, "Failed to list workspaces");
+    return handleApiError(error);
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const profile = await currentProfile();
+
+    if (!profile) {
+      return ApiErrors.unauthorized();
     }
 
     // Apply rate limiting for server creation
@@ -44,12 +74,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const body = await req.json().catch(() => null);
     const result = serverSchema.safeParse(body);
 
     if (!result.success) {
-      return new NextResponse(result.error.issues[0]?.message || "Invalid server data", {
-        status: 400,
-      });
+      return handleApiError(result.error);
     }
 
     const server = await db.server.create({
@@ -71,9 +100,9 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(server);
+    return NextResponse.json(server, { headers: getRateLimitHeaders(rateLimitResult) });
   } catch (error) {
     apiLogger.error({ error }, "Failed to create server");
-    return new NextResponse("Internal Error", { status: 500 });
+    return handleApiError(error);
   }
 }

@@ -4,25 +4,27 @@ generator client {
 
 // prisma/schema.prisma
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   // uncomment next line if you use Prisma <5.10
   // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Profile {
-  id            String        @id @default(uuid())
-  userId        String        @unique
-  name          String
-  imageUrl      String        @db.Text
-  email         String        @db.Text
-  presenceStatus String       @default("online")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  servers       Server[]
-  members       Member[]
-  channels      Channel[]
-  notifications Notification[]
+  id                     String            @id @default(uuid())
+  userId                 String            @unique
+  name                   String
+  imageUrl               String            @db.Text
+  email                  String            @db.Text
+  presenceStatus         String            @default("online")
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  meetingDecisions       MeetingDecision[] @relation("DecisionAuthor")
+  meetingActionsAssigned MeetingAction[]   @relation("ActionAssignee")
+  servers                Server[]
+  members                Member[]
+  channels               Channel[]
+  notifications          Notification[]
 }
 
 model Server {
@@ -41,20 +43,20 @@ model Server {
 }
 
 model Member {
-  id                     String          @id @default(uuid())
-  role                   MemberRole      @default(GUEST)
+  id                     String                  @id @default(uuid())
+  role                   MemberRole              @default(GUEST)
   profileId              String
   serverId               String
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
-  profile                Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  server                 Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  profile                Profile                 @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  server                 Server                  @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages               Message[]
   messageReactions       MessageReaction[]
   directMessageReactions DirectMessageReaction[]
   directMessages         DirectMessage[]
-  conversationsInitiated Conversation[]  @relation("MemberOne")
-  conversationsReceived  Conversation[]  @relation("MemberTwo")
+  conversationsInitiated Conversation[]          @relation("MemberOne")
+  conversationsReceived  Conversation[]          @relation("MemberTwo")
 
   @@index([profileId])
   @@index([serverId])
@@ -63,35 +65,36 @@ model Member {
 }
 
 model Channel {
-  id        String      @id @default(uuid())
-  name      String
-  type      ChannelType @default(TEXT)
-  profileId String
-  serverId  String
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  profile   Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  messages  Message[]
+  id               String            @id @default(uuid())
+  name             String
+  type             ChannelType       @default(TEXT)
+  profileId        String
+  serverId         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  profile          Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  server           Server            @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages         Message[]
+  meetingWorkspace MeetingWorkspace?
 
   @@index([profileId])
   @@index([serverId])
 }
 
 model Message {
-  id        String          @id @default(uuid())
-  content   String          @db.Text
-  fileUrl   String?         @db.Text
+  id        String            @id @default(uuid())
+  content   String            @db.Text
+  fileUrl   String?           @db.Text
   memberId  String
   channelId String
-  deleted   Boolean         @default(false)
+  deleted   Boolean           @default(false)
   replyToId String?
-  replyTo   Message?        @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   Message[]       @relation("MessageReplies")
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  member    Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  channel   Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo   Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[]         @relation("MessageReplies")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  member    Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel   Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
 
   @@index([channelId])
@@ -144,19 +147,19 @@ model Conversation {
 }
 
 model DirectMessage {
-  id             String       @id @default(uuid())
-  content        String       @db.Text
-  fileUrl        String?      @db.Text
+  id             String                  @id @default(uuid())
+  content        String                  @db.Text
+  fileUrl        String?                 @db.Text
   memberId       String
   conversationId String
-  deleted        Boolean      @default(false)
+  deleted        Boolean                 @default(false)
   replyToId      String?
-  replyTo        DirectMessage? @relation("DirectMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies        DirectMessage[] @relation("DirectMessageReplies")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo        DirectMessage?          @relation("DirectMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        DirectMessage[]         @relation("DirectMessageReplies")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  member         Member                  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   reactions      DirectMessageReaction[]
 
   @@index([memberId])
@@ -180,6 +183,56 @@ model DirectMessageReaction {
   @@index([memberId])
 }
 
+model MeetingWorkspace {
+  id        String              @id @default(uuid())
+  channelId String              @unique
+  mode      MeetingMode         @default(FOCUS)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  channel   Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  agenda    MeetingAgendaItem[]
+  decisions MeetingDecision[]
+  actions   MeetingAction[]
+}
+
+model MeetingAgendaItem {
+  id          String           @id @default(uuid())
+  workspaceId String
+  title       String           @db.VarChar(180)
+  completed   Boolean          @default(false)
+  position    Int              @default(0)
+  createdAt   DateTime         @default(now())
+  workspace   MeetingWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, position])
+}
+
+model MeetingDecision {
+  id              String           @id @default(uuid())
+  workspaceId     String
+  authorProfileId String
+  summary         String           @db.VarChar(500)
+  createdAt       DateTime         @default(now())
+  workspace       MeetingWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author          Profile          @relation("DecisionAuthor", fields: [authorProfileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model MeetingAction {
+  id                String           @id @default(uuid())
+  workspaceId       String
+  assigneeProfileId String?
+  title             String           @db.VarChar(240)
+  dueAt             DateTime?
+  completed         Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  workspace         MeetingWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee          Profile?         @relation("ActionAssignee", fields: [assigneeProfileId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, completed, createdAt])
+}
+
 enum MemberRole {
   ADMIN
   MODERATOR
@@ -190,4 +243,11 @@ enum ChannelType {
   TEXT
   AUDIO
   VIDEO
+}
+
+enum MeetingMode {
+  DECISION
+  STANDUP
+  FOCUS
+  WORKSHOP
 }

@@ -18,20 +18,20 @@ export function ModeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="h-10 w-10 border border-white/5 bg-surface text-zinc-300 hover:bg-surface-hover hover:text-white" variant="outline" size="icon">
+        <Button className="h-10 w-10 rounded-xl border-border bg-surface text-muted-foreground hover:border-primary/30 hover:bg-primary/10 hover:text-primary" variant="outline" size="icon">
           <Sun className="h-[1.1rem] w-[1.1rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-[1.1rem] w-[1.1rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border border-white/5 bg-surface text-zinc-200">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer focus:bg-white/5">
+      <DropdownMenuContent align="end" className="border border-border bg-card text-foreground">
+        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer focus:bg-primary/10">
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer focus:bg-white/5">
+        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer focus:bg-primary/10">
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer focus:bg-white/5">
+        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer focus:bg-primary/10">
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -10,18 +10,20 @@ interface NavigationItemProps {
   id: string;
   imageUrl: string;
   name: string;
+  isActive?: boolean;
 };
 
 export const NavigationItem = ({
   id,
   imageUrl,
-  name
+  name,
+  isActive = false
 }: NavigationItemProps) => {
   const router = useRouter();
 
   const onClick = () => {
     router.push(`/servers/${id}`);
-  }
+  };
 
   return (
     <ActionTooltip
@@ -34,18 +36,29 @@ export const NavigationItem = ({
         className="group relative flex items-center"
       >
         <div className={cn(
-          "absolute left-0 w-[4px] rounded-r-full bg-gradient-to-b from-indigo-400 to-cyan-400 transition-all",
-          "h-[8px] group-hover:h-[20px]"
+          "absolute -left-2 w-[3px] rounded-r-full bg-gradient-to-b from-primary to-amber-300 transition-all",
+          isActive ? "h-7 shadow-[0_0_14px_hsl(var(--primary)/0.55)]" : "h-2 group-hover:h-6"
         )} />
         <div className={cn(
-          "relative mx-3 flex h-[48px] w-[48px] overflow-hidden rounded-md border border-white/10 transition-all duration-200 group-hover:border-indigo-300/70 group-hover:bg-indigo-500/10"
+          "relative mx-3 flex h-[48px] w-[48px] overflow-hidden rounded-2xl border border-border/70 bg-surface transition-all duration-200",
+          isActive
+            ? "border-primary/60 bg-primary/15 shadow-[0_8px_24px_hsl(var(--primary)/0.16)]"
+            : "group-hover:rounded-xl group-hover:border-primary/35 group-hover:bg-primary/10"
         )}>
-          <Image
-            fill
-            src={imageUrl}
-            alt={name}
-            className="object-cover"
-          />
+          {imageUrl ? (
+            <Image
+              fill
+              src={imageUrl}
+              alt={name}
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-primary/10">
+              <span className="text-[0.62rem] font-black tracking-[0.14em] text-primary">
+                {name.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
       </button>
     </ActionTooltip>

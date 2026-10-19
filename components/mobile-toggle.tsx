@@ -1,4 +1,6 @@
-import { Menu } from "lucide-react"
+"use client";
+
+import { Menu } from "lucide-react";
 
 import {
   Sheet,
@@ -6,14 +8,18 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { NavigationSidebar } from "@/components/navigation/navigation-sidebar";
 import { ServerSidebar } from "@/components/server/server-sidebar";
+import { useServerNavigation } from "@/components/providers/server-navigation-provider";
 
 export const MobileToggle = ({
   serverId
 }: {
   serverId: string;
 }) => {
+  const navigation = useServerNavigation();
+
+  if (!navigation?.server || !navigation.profileId || !navigation.role || navigation.server.id !== serverId) return null;
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -26,12 +32,9 @@ export const MobileToggle = ({
           <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-[92vw] max-w-[420px] gap-0 p-0">
-        <div className="flex w-[72px] shrink-0">
-          <NavigationSidebar />
-        </div>
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <ServerSidebar serverId={serverId} />
+      <SheetContent side="left" className="w-[88vw] max-w-[360px] gap-0 overflow-hidden p-0">
+        <div className="h-full min-w-0 overflow-hidden">
+          <ServerSidebar server={navigation.server} profileId={navigation.profileId} role={navigation.role} />
         </div>
       </SheetContent>
     </Sheet>

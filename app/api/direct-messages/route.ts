@@ -55,6 +55,14 @@ export async function GET(
       return ApiErrors.notFound("Conversation not found");
     }
 
+    if (cursor) {
+      const cursorMessage = await db.directMessage.findFirst({
+        where: { id: cursor, conversationId },
+        select: { id: true },
+      });
+      if (!cursorMessage) return ApiErrors.badRequest("Message cursor does not belong to this conversation");
+    }
+
     let messages: DirectMessage[] = [];
 
     if (cursor) {
@@ -70,7 +78,7 @@ export async function GET(
         include: {
           member: {
             include: {
-              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true } },
             }
           },
           replyTo: {

@@ -20,13 +20,7 @@ export const createMentionNotifications = async ({
   link,
   profiles,
 }: CreateMentionNotificationsProps) => {
-  const mentionTokens = Array.from(
-    new Set(
-      Array.from(content.matchAll(/@([a-zA-Z0-9._-]+)/g)).map((match) => match[1].trim().toLowerCase())
-    )
-  );
-
-  if (!mentionTokens.length) {
+  if (!content.includes("@") || !profiles.length) {
     return 0;
   }
 
@@ -37,17 +31,18 @@ export const createMentionNotifications = async ({
       continue;
     }
 
-    const normalizedName = profile.name.toLowerCase();
-    const firstName = profile.name.split(/\s+/)[0]?.toLowerCase() ?? normalizedName;
-
-    const isMentioned = mentionTokens.some((token) => {
-      const tokenValue = token.trim().toLowerCase();
-      return (
-        tokenValue === normalizedName ||
-        tokenValue === firstName ||
-        normalizedName.includes(tokenValue) ||
-        firstName.includes(tokenValue)
+    const candidates = Array.from(new Set([
+      profile.name.trim(),
+      profile.name.trim().split(/\s+/)[0] ?? "",
+    ].filter(Boolean)));
+    const isMentioned = candidates.some((candidate) => {
+      const escapedCandidate = candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const mention = new RegExp(
+        `(^|[^\\p{L}\\p{N}_])@${escapedCandidate}(?=$|[^\\p{L}\\p{N}_])`,
+        "iu",
       );
+
+      return mention.test(content);
     });
 
     if (isMentioned) {

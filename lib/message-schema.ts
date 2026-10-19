@@ -5,9 +5,10 @@ const fileUrlSchema = z
   .string()
   .url()
   .max(2048)
+  .refine((value) => sanitizeFileUrl(value) !== null, "Only secure UploadThing attachments are allowed")
   .optional()
   .nullable()
-  .transform((val) => sanitizeFileUrl(val));
+  .transform((val) => sanitizeFileUrl(val) ?? null);
 
 export const createMessageSchema = z.object({
   content: z

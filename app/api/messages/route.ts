@@ -58,6 +58,14 @@ export async function GET(
       return ApiErrors.notFound("Channel not found");
     }
 
+    if (cursor) {
+      const cursorMessage = await db.message.findFirst({
+        where: { id: cursor, channelId },
+        select: { id: true },
+      });
+      if (!cursorMessage) return ApiErrors.badRequest("Message cursor does not belong to this channel");
+    }
+
     let messages: Message[] = [];
 
     if (cursor) {
@@ -73,7 +81,7 @@ export async function GET(
         include: {
           member: {
             include: {
-              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
+              profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true } },
             }
           },
           replyTo: {
@@ -85,15 +93,7 @@ export async function GET(
               }
             }
           },
-          reactions: {
-            include: {
-              member: {
-                include: {
-                  profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
-                }
-              }
-            }
-          }
+          reactions: { select: { id: true, emoji: true, memberId: true, messageId: true } }
         },
         orderBy: {
           createdAt: "desc",
@@ -120,15 +120,7 @@ export async function GET(
               }
             }
           },
-          reactions: {
-            include: {
-              member: {
-                include: {
-                  profile: { select: { id: true, userId: true, name: true, imageUrl: true, presenceStatus: true, createdAt: true, updatedAt: true } },
-                }
-              }
-            }
-          }
+          reactions: { select: { id: true, emoji: true, memberId: true, messageId: true } }
         },
         orderBy: {
           createdAt: "desc",

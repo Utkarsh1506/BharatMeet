@@ -16,7 +16,7 @@ export const limitSchema = z
   .transform((val) => parseInt(val, 10))
   .pipe(z.number().int().min(1).max(100))
   .optional()
-  .default("10");
+  .default("20");
 
 // Messages query parameters
 export const messagesQuerySchema = z.object({
@@ -40,6 +40,13 @@ export const channelIdQuerySchema = z.object({
   channelId: uuidSchema,
 });
 
+const dateOnlySchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date")
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, "Use a valid date");
+
 // Member ID query parameter
 export const memberIdQuerySchema = z.object({
   memberId: uuidSchema,
@@ -47,17 +54,26 @@ export const memberIdQuerySchema = z.object({
 
 // Search query parameters
 export const searchQuerySchema = z.object({
-  q: z.string().min(1, "Search query is required").max(100),
-  serverId: uuidSchema.optional(),
+  q: z.string().trim().max(100).optional().default(""),
+  serverId: uuidSchema,
   channelId: uuidSchema.optional(),
+  memberId: uuidSchema.optional(),
+  from: dateOnlySchema.optional(),
+  to: dateOnlySchema.optional(),
+  timezoneOffset: z.string().optional().default("0")
+    .transform((value) => Number(value))
+    .pipe(z.number().int().min(-840).max(840)),
   limit: limitSchema,
+}).refine((params) => !params.from || !params.to || params.from <= params.to, {
+  message: "Start date must be before end date",
+  path: ["to"],
 });
 
 /**
  * Helper to validate query parameters from URL
  */
 export function validateQueryParams<T>(
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T, z.ZodTypeDef, any>,
   searchParams: URLSearchParams | Record<string, string | string[] | undefined>
 ): { success: true; data: T } | { success: false; error: z.ZodError } {
   // Convert URLSearchParams to plain object

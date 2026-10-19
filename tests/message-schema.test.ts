@@ -25,4 +25,13 @@ describe("message schemas", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects trusted-host lookalikes as attachments", () => {
+    expect(
+      createMessageSchema.safeParse({
+        content: "Attachment",
+        fileUrl: "https://utfs.io.attacker.example/file.pdf",
+      }).success,
+    ).toBe(false);
+  });
 });
