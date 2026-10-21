@@ -10,6 +10,8 @@ import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize";
 import { apiLogger } from "@/lib/logger";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 
+export const dynamic = "force-dynamic";
+
 const serverSchema = z.object({
   name: z
     .string()

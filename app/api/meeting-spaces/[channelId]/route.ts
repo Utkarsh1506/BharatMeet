@@ -9,6 +9,8 @@ import { apiLimiter, checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limi
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { uuidSchema } from "@/lib/query-validation";
 
+export const dynamic = "force-dynamic";
+
 const updateSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("mode"), mode: z.nativeEnum(MeetingMode) }),
   z.object({ action: z.literal("agenda-add"), title: z.string().trim().min(2).max(180) }),

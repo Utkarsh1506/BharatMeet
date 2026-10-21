@@ -7,6 +7,8 @@ import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 const notificationUpdateSchema = z.union([
   z.object({ notificationId: z.string().uuid() }).strict(),
   z.object({ markAllAsRead: z.literal(true) }).strict(),

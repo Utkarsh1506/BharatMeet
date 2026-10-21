@@ -32,7 +32,7 @@ export default authMiddleware({
  */
 export const config = {
   matcher: [
-    // Match all routes except static files and health check
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Match all routes except static files and the public health endpoint.
+    "/((?!_next/static|_next/image|favicon.ico|api/health(?:/|$)|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

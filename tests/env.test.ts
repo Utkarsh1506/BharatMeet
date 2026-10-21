@@ -77,4 +77,27 @@ describe("Environment Validation", () => {
       expect(result.error.issues.some((issue) => issue.path[0] === "UPSTASH_REDIS_REST_URL")).toBe(true);
     }
   });
+
+  it("trims surrounding whitespace from production Clerk keys", () => {
+    const result = envSchema.safeParse({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://db.example/app",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "  pk_live_example  \n",
+      CLERK_SECRET_KEY: "\tsk_live_example  ",
+      UPLOADTHING_SECRET: "upload_secret",
+      UPLOADTHING_APP_ID: "upload_app",
+      LIVEKIT_API_KEY: "livekit_key",
+      LIVEKIT_API_SECRET: "livekit_secret",
+      NEXT_PUBLIC_LIVEKIT_URL: "wss://meet.example",
+      NEXT_PUBLIC_SITE_URL: "https://meet.example",
+      UPSTASH_REDIS_REST_URL: "https://redis.example",
+      UPSTASH_REDIS_REST_TOKEN: "redis_token",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY).toBe("pk_live_example");
+      expect(result.data.CLERK_SECRET_KEY).toBe("sk_live_example");
+    }
+  });
 });

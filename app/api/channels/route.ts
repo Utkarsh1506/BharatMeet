@@ -11,6 +11,8 @@ import { apiLogger } from "@/lib/logger";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { uuidSchema } from "@/lib/query-validation";
 
+export const dynamic = "force-dynamic";
+
 const channelSchema = z.object({
   name: z
     .string()

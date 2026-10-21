@@ -8,6 +8,8 @@ import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limi
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   req: Request,
   { params }: { params: { serverId: string } }

@@ -8,6 +8,8 @@ import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limi
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 const memberRoleSchema = z.object({
   role: z.enum(["GUEST", "MODERATOR"]),
 });

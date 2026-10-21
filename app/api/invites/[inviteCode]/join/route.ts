@@ -7,6 +7,8 @@ import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limi
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   _req: Request,
   { params }: { params: { inviteCode: string } },

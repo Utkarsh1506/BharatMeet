@@ -10,6 +10,8 @@ import { sanitizeName } from "@/lib/sanitize";
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 const updateChannelSchema = z.object({
   name: z.string().trim().min(1).max(80).transform(sanitizeName).pipe(z.string().min(1).max(80)),
   type: z.nativeEnum(ChannelType),

@@ -90,24 +90,33 @@ export type Env = z.infer<typeof envSchema>;
  * Production fails closed: unsafe or incomplete configuration must not start.
  */
 function validateEnv(): Env {
+  // Next imports API route modules while collecting build data. Defer strict
+  // production checks until the deployed server starts handling requests so a
+  // local build with development credentials can still complete. Vercel's
+  // runtime will validate the actual deployment environment on startup.
+  const isNextBuild = process.env.NEXT_PHASE === "phase-production-build";
+
   try {
     const env = envSchema.parse(process.env);
     console.log("✅ Environment validation passed");
     return env;
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError && !isNextBuild) {
       const missingVars = error.errors.map((err) => {
         return `  ❌ ${err.path.join(".")}: ${err.message}`;
       });
 
-      console.error(`\n⚠️  Environment validation failed${process.env.NODE_ENV === "production" ? " (production startup blocked)" : " (development fallback enabled)"}:`);
+      const failureMode = process.env.NODE_ENV === "production"
+        ? isNextBuild ? " (build phase; strict check deferred to runtime)" : " (production startup blocked)"
+        : " (development fallback enabled)";
+      console.error(`\n⚠️  Environment validation failed${failureMode}:`);
       console.error("Missing or invalid environment variables:");
       console.error(missingVars.join("\n"));
       console.error("\nPlease check your .env file and ensure all required variables are set.");
       console.error("See .env.example for reference.\n");
     }
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !isNextBuild) {
       throw new Error("Invalid production environment configuration. Fix the fields listed above before starting the app.");
     }
 
@@ -131,7 +140,9 @@ function validateEnv(): Env {
       NODE_ENV: process.env.NODE_ENV || "development",
     };
 
-    console.warn("⚠️  Using environment fallback defaults — some features may not work correctly");
+    if (!isNextBuild) {
+      console.warn("⚠️  Using environment fallback defaults — some features may not work correctly");
+    }
     return defaults;
   }
 }

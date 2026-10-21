@@ -8,6 +8,8 @@ import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
 import { uuidSchema } from "@/lib/query-validation";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const room = req.nextUrl.searchParams.get("room");
 

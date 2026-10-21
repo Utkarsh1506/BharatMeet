@@ -10,6 +10,8 @@ import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize";
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 const updateServerSchema = z.object({
   name: z.string().trim().max(160).transform(sanitizeName).pipe(z.string().min(2).max(80)),
   imageUrl: z.string().url().max(2048).refine((value) => sanitizeFileUrl(value) !== null, "Use an image uploaded through UploadThing"),
