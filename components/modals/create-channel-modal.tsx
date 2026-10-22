@@ -34,14 +34,15 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useEffect } from "react";
+import { isDefaultChannelName } from "@/lib/channel-name";
 
 const formSchema = z.object({
   name: z.string().min(1, {
     message: "Meeting name is required."
   }).refine(
-    name => name !== "general",
+    name => !isDefaultChannelName(name),
     {
-      message: "Meeting name cannot be 'general'"
+      message: "This name is reserved for the default room."
     }
   ),
   type: z.nativeEnum(ChannelType)

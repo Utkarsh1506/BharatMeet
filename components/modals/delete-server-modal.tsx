@@ -32,7 +32,7 @@ export const DeleteServerModal = () => {
 
       onClose();
       router.refresh();
-      router.push("/");
+      router.push("/setup");
     } catch (error) {
       console.log(error);
     } finally {
@@ -45,7 +45,7 @@ export const DeleteServerModal = () => {
       <DialogContent className="bg-card text-card-foreground p-0 overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
-            Delete SABHA
+            Delete workspace
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
             Are you sure you want to do this? <br />
@@ -66,7 +66,7 @@ export const DeleteServerModal = () => {
               variant="primary"
               onClick={onClick}
             >
-              Confirm
+              {isLoading ? "Deleting…" : "Delete workspace"}
             </Button>
           </div>
         </DialogFooter>

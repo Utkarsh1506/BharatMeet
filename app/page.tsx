@@ -70,7 +70,7 @@ export default function LandingPage() {
 
         <nav className="flex items-center gap-2 sm:gap-3" aria-label="Main navigation">
           <a href="/sign-in?redirect_url=%2Fsetup" className="rounded-full px-3 py-2 text-sm font-medium text-white/70 transition hover:text-white sm:px-4">Log in</a>
-          <a href="/sign-up?redirect_url=%2Fsetup" className="rounded-full border border-white/15 bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#f2bd55]/50 hover:bg-white/[0.11] sm:px-5">
+          <a href="/sign-up?redirect_url=%2Fauth%2Fverified" className="rounded-full border border-white/15 bg-white/[0.07] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#f2bd55]/50 hover:bg-white/[0.11] sm:px-5">
             Create account <span className="hidden sm:inline">↗</span>
           </a>
         </nav>

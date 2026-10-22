@@ -42,7 +42,7 @@ export const ServerSection = ({
         </ActionTooltip>
       )}
       {role === MemberRole.ADMIN && sectionType === "members" && (
-        <ActionTooltip label="Manage Sadasya" side="top">
+        <ActionTooltip label="Manage members" side="top">
           <button
             type="button"
             aria-label="Manage members"

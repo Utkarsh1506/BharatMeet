@@ -100,12 +100,12 @@ export const MembersModal = () => {
       <DialogContent className="bg-card text-card-foreground overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
-            Manage Sadasya
+            Manage members
           </DialogTitle>
           <DialogDescription 
             className="text-center text-zinc-500"
           >
-            {server?.members?.length} Sadasya
+            {server?.members?.length} {server?.members?.length === 1 ? "member" : "members"}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="mt-8 max-h-[420px] pr-6">
@@ -143,7 +143,7 @@ export const MembersModal = () => {
                               onClick={() => onRoleChange(member.id, "GUEST")}
                             >
                               <Shield className="h-4 w-4 mr-2" />
-                              Mehmaan
+                              Guest
                               {member.role === "GUEST" && (
                                 <Check
                                   className="h-4 w-4 ml-auto"
@@ -169,7 +169,7 @@ export const MembersModal = () => {
                         onClick={() => onKick(member.id)}
                       >
                         <Gavel className="h-4 w-4 mr-2" />
-                        Nishkashit
+                        Remove member
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

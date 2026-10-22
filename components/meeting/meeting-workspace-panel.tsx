@@ -197,7 +197,7 @@ export const MeetingWorkspacePanel = ({
   return (
     <aside className="meeting-tools-panel">
       <div className="meeting-tools-heading">
-        <div className="meeting-tools-title"><span className="meeting-tools-icon"><Sparkles className="h-4 w-4" /></span><div><p>Sabha workspace</p><span>Make the room count</span></div></div>
+        <div className="meeting-tools-title"><span className="meeting-tools-icon"><Sparkles className="h-4 w-4" /></span><div><p>Meeting workspace</p><span>Make the room count</span></div></div>
         {workspace && <span className="meeting-mode-badge">{workspace.mode.toLowerCase()}</span>}
       </div>
       <div className="meeting-mode-select">

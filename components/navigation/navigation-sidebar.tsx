@@ -18,10 +18,13 @@ interface NavigationSidebarProps {
 
 export const NavigationSidebar = ({ servers = [] }: NavigationSidebarProps) => {
   const pathname = usePathname();
+  const activeServerId = pathname?.match(/^\/servers\/([^/]+)/)?.[1];
+  const homeServer = servers.find((server) => server.id === activeServerId) ?? servers[0];
+  const homeHref = homeServer ? `/servers/${homeServer.id}` : "/setup";
 
   return (
     <header className="flex h-16 w-full items-center gap-1.5 border-b border-border/70 bg-sidebar/95 px-2.5 backdrop-blur-xl sm:gap-3 sm:px-5">
-      <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label="Bharat Meet home">
+      <Link href={homeHref} className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label={homeServer ? `Go to ${homeServer.name} workspace` : "Go to workspace setup"}>
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-[10px] font-black tracking-[0.12em] text-primary-foreground shadow-md shadow-primary/15 transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-105">
           BM
         </span>

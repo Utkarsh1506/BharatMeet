@@ -37,7 +37,7 @@ const ServerIdPage = async ({ params: paramsPromise }: ServerIdPageProps) => {
   })
 
   if (!server) {
-    return redirect("/");
+    return redirect("/setup");
   }
 
   const initialChannel = server?.channels[0];

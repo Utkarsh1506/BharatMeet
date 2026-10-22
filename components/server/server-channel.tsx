@@ -12,6 +12,7 @@ import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { ModalType, useModal } from "@/hooks/use-modal-store";
+import { getChannelDisplayName, isDefaultChannelName } from "@/lib/channel-name";
 
 interface ServerChannelProps {
   channel: Channel;
@@ -35,6 +36,7 @@ export const ServerChannel = ({
   const router = useRouter();
 
   const Icon = iconMap[channel.type];
+  const isDefaultChannel = isDefaultChannelName(channel.name);
 
   const onClick = () => {
     router.push(`/servers/${params?.serverId}/channels/${channel.id}`)
@@ -58,9 +60,9 @@ export const ServerChannel = ({
         "line-clamp-1 text-sm font-medium transition-colors",
         params?.channelId === channel.id ? "text-primary" : "text-foreground/75 group-hover:text-foreground"
       )}>
-        {channel.name}
+        {getChannelDisplayName(channel.name)}
       </p>
-      {channel.name !== "samanya sabha" && role !== MemberRole.GUEST && (
+      {!isDefaultChannel && role !== MemberRole.GUEST && (
         <div className="ml-auto flex items-center gap-x-2">
           <ActionTooltip label="Edit">
             <Edit
@@ -76,7 +78,7 @@ export const ServerChannel = ({
           </ActionTooltip>
         </div>
       )}
-      {channel.name === "samanya sabha" && (
+      {isDefaultChannel && (
         <Lock
           className="ml-auto w-4 h-4 text-zinc-500 dark:text-zinc-400"
         />

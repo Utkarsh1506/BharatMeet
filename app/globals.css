@@ -728,7 +728,7 @@ body,
   }
 }
 
-/* Sabha meeting workspace: collaboration controls stay visible beside the call. */
+/* Meeting workspace: collaboration controls stay visible beside the call. */
 .meeting-video-stage {
   display: flex;
   gap: 0.9rem;

@@ -45,13 +45,13 @@ const ServerIdLayout = async ({
   });
 
   if (!server) {
-    return redirect("/");
+    return redirect("/setup");
   }
 
   const currentMember = server.members.find((member) => member.profileId === profile.id);
 
   if (!currentMember) {
-    return redirect("/");
+    return redirect("/setup");
   }
 
   return (

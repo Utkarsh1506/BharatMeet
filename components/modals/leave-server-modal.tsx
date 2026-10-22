@@ -32,7 +32,7 @@ export const LeaveServerModal = () => {
 
       onClose();
       router.refresh();
-      router.push("/");
+      router.push("/setup");
     } catch (error) {
       console.log(error);
     } finally {
@@ -45,7 +45,7 @@ export const LeaveServerModal = () => {
       <DialogContent className="bg-card text-card-foreground p-0 overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
-            Leave SABHA
+            Exit workspace
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
             Are you sure you want to leave <span className="font-semibold text-primary">{server?.name}</span>?
@@ -65,7 +65,7 @@ export const LeaveServerModal = () => {
               variant="primary"
               onClick={onClick}
             >
-              Confirm
+              {isLoading ? "Exiting…" : "Exit workspace"}
             </Button>
           </div>
         </DialogFooter>

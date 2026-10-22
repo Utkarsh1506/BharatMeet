@@ -9,6 +9,7 @@ import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limi
 import { sanitizeName } from "@/lib/sanitize";
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
+import { isDefaultChannelName } from "@/lib/channel-name";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export async function DELETE(
       select: { id: true, name: true },
     });
     if (!channel) return ApiErrors.notFound("Room not found");
-    if (channel.name.toLowerCase() === "general") return ApiErrors.badRequest("The general room cannot be deleted");
+    if (isDefaultChannelName(channel.name)) return ApiErrors.badRequest("The default room cannot be deleted");
 
     const server = await db.server.update({
       where: {
@@ -104,8 +105,8 @@ export async function PATCH(
     const result = updateChannelSchema.safeParse(body);
     if (!result.success) return handleApiError(result.error);
 
-    if (result.data.name.toLowerCase() === "general") {
-      return ApiErrors.badRequest("Name cannot be 'general'");
+    if (isDefaultChannelName(result.data.name)) {
+      return ApiErrors.badRequest("This name is reserved for the default room.");
     }
 
     const channel = await db.channel.findFirst({
@@ -117,7 +118,7 @@ export async function PATCH(
       select: { id: true, name: true },
     });
     if (!channel) return ApiErrors.notFound("Room not found");
-    if (channel.name.toLowerCase() === "general") return ApiErrors.badRequest("The general room cannot be changed");
+    if (isDefaultChannelName(channel.name)) return ApiErrors.badRequest("The default room cannot be changed");
 
     const server = await db.server.update({
       where: {

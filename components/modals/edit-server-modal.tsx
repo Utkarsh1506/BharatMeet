@@ -83,10 +83,10 @@ export const EditServerModal = () => {
       <DialogContent className="bg-card text-card-foreground p-0 overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
-            Customize your SABHA
+            Customize your workspace
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
-            Give your SABHA a personality with a name and an image. You can always change it later.
+            Give your workspace a name and image. You can change them later.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -118,7 +118,7 @@ export const EditServerModal = () => {
                     <FormLabel
                       className="uppercase text-xs font-bold text-zinc-500 dark:text-secondary/70"
                     >
-                      SABHA name
+                      Workspace name
                     </FormLabel>
                     <FormControl>
                       <Input

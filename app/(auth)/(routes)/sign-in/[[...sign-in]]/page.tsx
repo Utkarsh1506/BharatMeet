@@ -18,8 +18,8 @@ export default function Page() {
 
         <div className="px-4 py-5 sm:px-6">
           <SignIn
-            afterSignInUrl="/setup"
-            afterSignUpUrl="/setup"
+            fallbackRedirectUrl="/setup"
+            signUpFallbackRedirectUrl="/auth/verified"
             appearance={{
               elements: {
                 rootBox: "w-full",

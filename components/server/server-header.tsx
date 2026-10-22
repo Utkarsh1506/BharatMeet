@@ -64,7 +64,7 @@ export const ServerHeader = ({
             onClick={() => onOpen("editServer", { server })}
             className="cursor-pointer px-3 py-2 text-sm"
           >
-            Sabha Settings
+            Workspace settings
             <Settings className="ml-auto h-4 w-4" />
           </DropdownMenuItem>
         )}
@@ -73,7 +73,7 @@ export const ServerHeader = ({
             onClick={() => onOpen("members", { server })}
             className="cursor-pointer px-3 py-2 text-sm"
           >
-            Manage Sadasya
+            Manage members
             <Users className="ml-auto h-4 w-4" />
           </DropdownMenuItem>
         )}
@@ -92,7 +92,7 @@ export const ServerHeader = ({
             onClick={() => onOpen("deleteServer", { server })}
             className="cursor-pointer px-3 py-2 text-sm text-rose-500"
           >
-            Delete Sabha
+            Delete workspace
             <Trash className="ml-auto h-4 w-4" />
           </DropdownMenuItem>
         )}
@@ -101,7 +101,7 @@ export const ServerHeader = ({
             onClick={() => onOpen("leaveServer", { server })}
             className="cursor-pointer px-3 py-2 text-sm text-rose-500"
           >
-            Leave Sabha
+            Exit workspace
             <LogOut className="ml-auto h-4 w-4" />
           </DropdownMenuItem>
         )}

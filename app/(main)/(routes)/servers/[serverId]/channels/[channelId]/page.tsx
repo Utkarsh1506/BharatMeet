@@ -58,7 +58,7 @@ const ChannelIdPage = async ({ params: paramsPromise }: ChannelIdPageProps) => {
   });
 
   if (!channel || !member || !server || channel.serverId !== server.id) {
-    redirect("/");
+    redirect("/setup");
   }
 
   return ( 

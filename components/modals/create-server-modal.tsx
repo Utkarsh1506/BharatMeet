@@ -29,10 +29,10 @@ import { useModal } from "@/hooks/use-modal-store";
 
 const formSchema = z.object({
   name: z.string().min(1, {
-    message: "Sabha name is required."
+    message: "Workspace name is required."
   }),
   imageUrl: z.string().min(1, {
-    message: "Sabha image is required."
+    message: "Workspace image is required."
   })
 });
 
@@ -74,10 +74,10 @@ export const CreateServerModal = () => {
       <DialogContent className="bg-card text-card-foreground p-0 overflow-hidden">
         <DialogHeader className="pt-8 px-6">
           <DialogTitle className="text-2xl text-center font-bold">
-            Customize your Sabha
+            Customize your workspace
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
-            Give your SABHA a personality with a name and an image. You can always change it later.
+            Give your workspace a name and image. You can change them later.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -109,13 +109,13 @@ export const CreateServerModal = () => {
                     <FormLabel
                       className="uppercase text-xs font-bold text-zinc-500 dark:text-secondary/70"
                     >
-                      SABHA name
+                      Workspace name
                     </FormLabel>
                     <FormControl>
                       <Input
                         disabled={isLoading}
                         className="border-border bg-input text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
-                        placeholder="Enter Sabha name"
+                        placeholder="Enter workspace name"
                         {...field}
                       />
                     </FormControl>
@@ -126,7 +126,7 @@ export const CreateServerModal = () => {
             </div>
             <DialogFooter className="bg-surface px-6 py-4">
               <Button variant="primary" disabled={isLoading}>
-                Create
+                {isLoading ? "Creating…" : "Create workspace"}
               </Button>
             </DialogFooter>
           </form>

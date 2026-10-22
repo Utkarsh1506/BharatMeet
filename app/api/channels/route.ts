@@ -10,6 +10,7 @@ import { sanitizeName } from "@/lib/sanitize";
 import { apiLogger } from "@/lib/logger";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { uuidSchema } from "@/lib/query-validation";
+import { isDefaultChannelName } from "@/lib/channel-name";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +67,8 @@ export async function POST(
       return handleApiError(result.error);
     }
 
-    if (result.data.name.toLowerCase() === "general") {
-      return ApiErrors.badRequest("Name cannot be 'general'");
+    if (isDefaultChannelName(result.data.name)) {
+      return ApiErrors.badRequest("This name is reserved for the default room.");
     }
 
     const server = await db.server.update({

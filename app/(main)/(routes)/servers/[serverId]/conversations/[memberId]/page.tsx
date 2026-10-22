@@ -42,7 +42,7 @@ const MemberIdPage = async ({
   });
 
   if (!currentMember) {
-    return redirect("/");
+    return redirect("/setup");
   }
 
   const otherMember = await db.member.findFirst({
