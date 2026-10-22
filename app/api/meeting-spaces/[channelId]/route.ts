@@ -69,9 +69,10 @@ const getWorkspace = (channelId: string) => db.meetingWorkspace.upsert({
   },
 });
 
-export async function GET(_req: Request, { params }: { params: { channelId: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ channelId: string }> }) {
   try {
-    const context = await getAuthorizedContext(params.channelId);
+    const { channelId } = await params;
+    const context = await getAuthorizedContext(channelId);
     if ("error" in context) return context.error;
     const workspace = await getWorkspace(context.channel.id);
     return NextResponse.json(workspace, { headers: getRateLimitHeaders(context.limit) });
@@ -81,9 +82,10 @@ export async function GET(_req: Request, { params }: { params: { channelId: stri
   }
 }
 
-export async function POST(req: Request, { params }: { params: { channelId: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ channelId: string }> }) {
   try {
-    const context = await getAuthorizedContext(params.channelId);
+    const { channelId } = await params;
+    const context = await getAuthorizedContext(channelId);
     if ("error" in context) return context.error;
 
     const body = await req.json().catch(() => null);

@@ -19,8 +19,9 @@ const updateChannelSchema = z.object({
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { channelId: string } }
+  { params }: { params: Promise<{ channelId: string }> }
 ) {
+  const { channelId } = await params;
   try {
     const profile = await currentProfile();
     const { searchParams } = new URL(req.url);
@@ -32,7 +33,7 @@ export async function DELETE(
     }
 
     const parsedServerId = uuidSchema.safeParse(serverId);
-    const parsedChannelId = uuidSchema.safeParse(params.channelId);
+    const parsedChannelId = uuidSchema.safeParse(channelId);
     if (!parsedServerId.success || !parsedChannelId.success) return ApiErrors.badRequest("Invalid workspace or room ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);
@@ -79,8 +80,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { channelId: string } }
+  { params }: { params: Promise<{ channelId: string }> }
 ) {
+  const { channelId } = await params;
   try {
     const profile = await currentProfile();
     const { searchParams } = new URL(req.url);
@@ -92,7 +94,7 @@ export async function PATCH(
     }
 
     const parsedServerId = uuidSchema.safeParse(serverId);
-    const parsedChannelId = uuidSchema.safeParse(params.channelId);
+    const parsedChannelId = uuidSchema.safeParse(channelId);
     if (!parsedServerId.success || !parsedChannelId.success) return ApiErrors.badRequest("Invalid workspace or room ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);

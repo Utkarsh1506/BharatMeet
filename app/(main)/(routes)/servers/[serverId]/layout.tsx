@@ -1,4 +1,4 @@
-import { redirectToSignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { MemberRole } from "@prisma/client";
 
@@ -9,14 +9,16 @@ import { ServerWorkspaceFrame } from "@/components/server/server-workspace-frame
 
 const ServerIdLayout = async ({
   children,
-  params,
+  params: paramsPromise,
 }: {
   children: React.ReactNode;
-  params: { serverId: string };
+  params: Promise<{ serverId: string }>;
 }) => {
+  const params = await paramsPromise;
   const profile = await currentProfile();
 
   if (!profile) {
+    const { redirectToSignIn } = await auth();
     return redirectToSignIn();
   }
 

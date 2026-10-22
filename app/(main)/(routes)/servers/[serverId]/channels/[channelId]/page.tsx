@@ -1,4 +1,4 @@
-import { redirectToSignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { ChannelType } from "@prisma/client";
 
@@ -11,18 +11,18 @@ import { RoomCompanion } from "@/components/chat/room-companion";
 import { db } from "@/lib/db";
 
 interface ChannelIdPageProps {
-  params: {
+  params: Promise<{
     serverId: string;
     channelId: string;
-  }
+  }>;
 }
 
-const ChannelIdPage = async ({
-  params
-}: ChannelIdPageProps) => {
+const ChannelIdPage = async ({ params: paramsPromise }: ChannelIdPageProps) => {
+  const params = await paramsPromise;
   const profile = await currentProfile();
 
   if (!profile) {
+    const { redirectToSignIn } = await auth();
     return redirectToSignIn();
   }
 

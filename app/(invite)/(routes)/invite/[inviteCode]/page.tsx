@@ -1,4 +1,4 @@
-import { redirectToSignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
@@ -7,20 +7,18 @@ import { uuidSchema } from "@/lib/query-validation";
 import { InviteLanding } from "@/components/invite/invite-landing";
 
 interface InviteCodePageProps {
-  params: {
-    inviteCode: string;
-  };
+  params: Promise<{ inviteCode: string }>;
 };
 
-const InviteCodePage = async ({
-  params
-}: InviteCodePageProps) => {
+const InviteCodePage = async ({ params: paramsPromise }: InviteCodePageProps) => {
+  const params = await paramsPromise;
   const parsedInviteCode = uuidSchema.safeParse(params.inviteCode);
   if (!parsedInviteCode.success) return notFound();
 
   const profile = await currentProfile();
 
   if (!profile) {
+    const { redirectToSignIn } = await auth();
     return redirectToSignIn({ returnBackUrl: `/invite/${parsedInviteCode.data}` });
   }
 

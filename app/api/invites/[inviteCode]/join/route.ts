@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   _req: Request,
-  { params }: { params: { inviteCode: string } },
+  { params }: { params: Promise<{ inviteCode: string }> },
 ) {
+  const { inviteCode: rawInviteCode } = await params;
   try {
     const profile = await currentProfile();
     if (!profile) return ApiErrors.unauthorized();
 
-    const inviteCode = uuidSchema.safeParse(params.inviteCode);
+    const inviteCode = uuidSchema.safeParse(rawInviteCode);
     if (!inviteCode.success) return ApiErrors.notFound("Invite link not found");
 
     const rateLimit = await checkRateLimit(apiLimiter, profile.id);

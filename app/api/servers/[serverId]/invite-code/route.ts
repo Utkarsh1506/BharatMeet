@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { serverId: string } }
+  { params }: { params: Promise<{ serverId: string }> }
 ) {
+  const { serverId } = await params;
   try {
     const profile = await currentProfile();
 
@@ -21,7 +22,7 @@ export async function PATCH(
       return ApiErrors.unauthorized();
     }
 
-    const id = uuidSchema.safeParse(params.serverId);
+    const id = uuidSchema.safeParse(serverId);
     if (!id.success) return ApiErrors.badRequest("Invalid workspace ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);

@@ -92,7 +92,7 @@ export const SocketProvider = ({
           // fresh Clerk token here avoids reusing an expired token on reconnect.
           auth: (callback) => {
             void getToken({ skipCache: true })
-              .then((freshToken) => callback({ token: freshToken || "" }))
+              .then((freshToken: string | null) => callback({ token: freshToken || "" }))
               .catch(() => callback({ token: "" }));
           },
           reconnection: true,

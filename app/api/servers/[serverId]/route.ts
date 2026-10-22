@@ -21,8 +21,9 @@ const parseServerId = (serverId: string) => uuidSchema.safeParse(serverId);
 
 export async function GET(
   req: Request,
-  { params }: { params: { serverId: string } }
+  { params }: { params: Promise<{ serverId: string }> }
 ) {
+  const { serverId } = await params;
   try {
     const profile = await currentProfile();
 
@@ -30,7 +31,7 @@ export async function GET(
       return ApiErrors.unauthorized();
     }
 
-    const id = parseServerId(params.serverId);
+    const id = parseServerId(serverId);
     if (!id.success) return ApiErrors.badRequest("Invalid workspace ID");
 
     const server = await db.server.findFirst({
@@ -81,8 +82,9 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { serverId: string } }
+  { params }: { params: Promise<{ serverId: string }> }
 ) {
+  const { serverId } = await params;
   try {
     const profile = await currentProfile();
 
@@ -90,7 +92,7 @@ export async function DELETE(
       return ApiErrors.unauthorized();
     }
 
-    const id = parseServerId(params.serverId);
+    const id = parseServerId(serverId);
     if (!id.success) return ApiErrors.badRequest("Invalid workspace ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);
@@ -112,8 +114,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { serverId: string } }
+  { params }: { params: Promise<{ serverId: string }> }
 ) {
+  const { serverId } = await params;
   try {
     const profile = await currentProfile();
 
@@ -121,7 +124,7 @@ export async function PATCH(
       return ApiErrors.unauthorized();
     }
 
-    const id = parseServerId(params.serverId);
+    const id = parseServerId(serverId);
     if (!id.success) return ApiErrors.badRequest("Invalid workspace ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);

@@ -1,21 +1,19 @@
-import { redirectToSignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 
 interface ServerIdPageProps {
-  params: {
-    serverId: string;
-  }
+  params: Promise<{ serverId: string }>
 };
 
-const ServerIdPage = async ({
-  params
-}: ServerIdPageProps) => {
+const ServerIdPage = async ({ params: paramsPromise }: ServerIdPageProps) => {
+  const params = await paramsPromise;
   const profile = await currentProfile();
 
   if (!profile) {
+    const { redirectToSignIn } = await auth();
     return redirectToSignIn();
   }
 

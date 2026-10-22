@@ -37,13 +37,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL || undefined}>
-      <html lang="en" suppressHydrationWarning>
-        <body className={cn(
-          font.className,
-          font.variable,
-          "min-h-screen bg-background text-foreground"
-        )}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn(
+        font.className,
+        font.variable,
+        "min-h-screen bg-background text-foreground"
+      )}>
+        <ClerkProvider dynamic proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL || "/__clerk/"}>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -58,8 +58,8 @@ export default function RootLayout({
               </QueryProvider>
             </SocketProvider>
           </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   )
 }

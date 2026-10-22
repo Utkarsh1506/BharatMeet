@@ -16,8 +16,9 @@ const memberRoleSchema = z.object({
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
+  const { memberId } = await params;
   try {
     const profile = await currentProfile();
     const { searchParams } = new URL(req.url);
@@ -29,7 +30,7 @@ export async function DELETE(
     }
 
     const parsedServerId = uuidSchema.safeParse(serverId);
-    const parsedMemberId = uuidSchema.safeParse(params.memberId);
+    const parsedMemberId = uuidSchema.safeParse(memberId);
     if (!parsedServerId.success || !parsedMemberId.success) return ApiErrors.badRequest("Invalid workspace or member ID");
 
     const limit = await checkRateLimit(apiLimiter, profile.id);
@@ -74,8 +75,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
+  const { memberId } = await params;
   try {
     const profile = await currentProfile();
     const { searchParams } = new URL(req.url);
@@ -87,7 +89,7 @@ export async function PATCH(
     }
 
     const parsedServerId = uuidSchema.safeParse(serverId);
-    const parsedMemberId = uuidSchema.safeParse(params.memberId);
+    const parsedMemberId = uuidSchema.safeParse(memberId);
     if (!parsedServerId.success || !parsedMemberId.success) return ApiErrors.badRequest("Invalid workspace or member ID");
 
     const body = await req.json().catch(() => null);

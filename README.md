@@ -146,15 +146,16 @@ Import the repository into Vercel. The included `vercel.json` uses `npm ci` and
 settings, using production values for Clerk, PostgreSQL, UploadThing, and
 LiveKit.
 
-For Clerk Frontend API proxying, set `NEXT_PUBLIC_CLERK_PROXY_URL` to
-`/__clerk/` in the Vercel environment, then deploy the proxy route before
-enabling it in Clerk. In the Clerk production instance, set the Frontend API
-proxy URL to `https://<your-production-domain>/__clerk`. The app forwards this
-path to the Frontend API and supplies the server-only Clerk secret and trusted
-client IP. Keep Vercel's `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
-`CLERK_SECRET_KEY` set to the matching live-instance keys. Add and verify a
-custom Clerk domain and its DNS records in the Clerk Dashboard if you need
-branded authentication and Account Portal URLs.
+For Clerk Frontend API proxying, the app uses Clerk's built-in `frontendApiProxy`
+middleware at `/__clerk` (`@clerk/nextjs` 7 and Next.js 15). In the Clerk
+production instance, set the Frontend API proxy URL to
+`https://bharatmeet.vercel.app/__clerk`. In Vercel Production, set
+`NEXT_PUBLIC_CLERK_PROXY_URL` to
+`https://bharatmeet.vercel.app/__clerk/`, and set
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to the matching live
+keys. The local `.env.example` uses the relative `/__clerk/` URL so development
+requests stay on localhost. No DNS records are needed for the Vercel hostname.
+A custom domain is optional for branded Clerk domains and Account Portal URLs.
 
 Vercel hosts the Next.js application and HTTP API routes, but its serverless
 runtime does not provide a persistent Socket.IO process. Keep the current
