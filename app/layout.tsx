@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   description: 'Bharat Ka Apna Meeting Platform!',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Bharat Meet' },
+  other: { 'mobile-web-app-capable': 'yes' },
   icons: { icon: '/icons/app-icon.svg', apple: '/icons/icon-192.png' },
 }
 
