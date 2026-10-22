@@ -45,6 +45,41 @@ const starterTemplates = [
   "Learning Circle",
 ];
 
+const getWorkspaceErrorMessage = (error: unknown) => {
+  if (!axios.isAxiosError(error)) {
+    return "We couldn't create your workspace. Please try again.";
+  }
+
+  const status = error.response?.status;
+  if (status === 401) return "Your session expired. Refresh the page and sign in again.";
+  if (status === 429) return "You’ve created workspaces too quickly. Please wait and try again.";
+
+  let responseData: unknown = error.response?.data;
+
+  // Next.js and proxy failures sometimes return an HTML error page. Never
+  // render that document inside the form; show a useful, safe message instead.
+  if (typeof responseData === "string") {
+    try {
+      responseData = JSON.parse(responseData);
+    } catch {
+      responseData = null;
+    }
+  }
+
+  if (responseData && typeof responseData === "object") {
+    const data = responseData as Record<string, unknown>;
+    const nestedError = data.error;
+    if (typeof nestedError === "string") return nestedError;
+    if (nestedError && typeof nestedError === "object" && "message" in nestedError) {
+      const message = nestedError.message;
+      if (typeof message === "string") return message;
+    }
+    if (typeof data.message === "string") return data.message;
+  }
+
+  return "We couldn't create your workspace right now. Please try again.";
+};
+
 export const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
@@ -70,11 +105,7 @@ export const InitialModal = () => {
       form.reset();
       router.push(`/servers/${response.data.id}`);
     } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data || "We couldn't create your Sabha. Please try again."
-        : "We couldn't create your Sabha. Please try again.";
-
-      form.setError("root", { message });
+      form.setError("root", { message: getWorkspaceErrorMessage(error) });
     }
   };
 

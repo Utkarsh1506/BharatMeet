@@ -3,6 +3,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const isPublicRoute = createRouteMatcher([
   "/",
   "/api/health(.*)",
+  // Workspace APIs authenticate in their handlers and return JSON 401s. Let
+  // those handlers respond instead of Clerk rewriting API requests to HTML.
+  "/api/servers(.*)",
   "/api/reminders/dispatch(.*)",
   "/manifest.webmanifest",
   "/sw.js",
