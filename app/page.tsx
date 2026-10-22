@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { PwaInstallButton } from "@/components/pwa-install-button";
+import { LandingMotion } from "@/components/landing/landing-motion";
 
 export const metadata: Metadata = {
   title: "Bharat Meet — Make room for good work",
@@ -54,8 +55,11 @@ const features = [
 export default function LandingPage() {
   return (
     <main className="landing-shell min-h-screen overflow-hidden bg-[#0b100f] text-[#f6f4eb]">
+      <LandingMotion />
       <div className="landing-grain pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+      <div className="landing-ambient landing-ambient-one" aria-hidden="true" />
+      <div className="landing-ambient landing-ambient-two" aria-hidden="true" />
+      <header className="landing-nav relative z-10 mx-auto flex w-[calc(100%-2rem)] max-w-7xl items-center justify-between px-4 py-3 sm:w-[calc(100%-4rem)] sm:px-6 lg:mt-4 lg:w-[calc(100%-6rem)]">
         <a href="/" className="flex items-center gap-3 rounded-xl" aria-label="Bharat Meet home">
           <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#f2bd55] text-[11px] font-black tracking-[0.12em] text-[#17201b] shadow-[0_8px_28px_rgba(242,189,85,.18)]">BM</span>
           <span>
@@ -73,7 +77,7 @@ export default function LandingPage() {
       </header>
 
       <section className="relative z-[1] mx-auto grid w-full max-w-7xl items-center gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pt-16 lg:grid-cols-[1fr_0.94fr] lg:gap-10 lg:px-12 lg:pb-28 lg:pt-20">
-        <div className="relative max-w-2xl">
+        <div className="landing-hero-copy relative max-w-2xl" data-reveal>
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f2bd55]/20 bg-[#f2bd55]/[0.07] px-3.5 py-2 text-[11px] font-semibold tracking-[0.12em] text-[#f6d58e]">
             <Sparkles className="h-3.5 w-3.5" />
             MADE FOR TEAMS THAT MAKE THINGS
@@ -98,10 +102,10 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[590px] lg:ml-auto">
+        <div className="landing-hero-visual relative mx-auto w-full max-w-[590px] lg:ml-auto" data-reveal>
           <div className="landing-orbit landing-orbit-one" aria-hidden="true" />
           <div className="landing-orbit landing-orbit-two" aria-hidden="true" />
-          <div className="relative overflow-hidden rounded-[28px] border border-white/[0.11] bg-[#121917]/90 p-3 shadow-[0_40px_120px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-4">
+          <div className="landing-glass-panel relative overflow-hidden rounded-[28px] border border-white/[0.11] p-3 shadow-[0_40px_120px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-4">
             <div className="flex items-center justify-between border-b border-white/[0.08] px-2 pb-3.5">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-[#f2bd55] text-[8px] font-black text-[#17201b]">BM</div>
@@ -150,8 +154,8 @@ export default function LandingPage() {
 
       <section className="relative z-[1] border-y border-white/[0.08] bg-white/[0.018]">
         <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 sm:grid-cols-3 sm:gap-5 sm:px-8 lg:px-12">
-          {features.map(({ icon: Icon, eyebrow, title, body, tone }) => (
-            <article key={title} className="landing-feature group rounded-[22px] border border-white/[0.08] bg-[#111715]/70 p-5 transition duration-300 hover:-translate-y-1 hover:border-white/[0.15] sm:p-6">
+          {features.map(({ icon: Icon, eyebrow, title, body, tone }, index) => (
+            <article key={title} data-reveal style={{ transitionDelay: `${index * 100}ms` }} className="landing-feature group rounded-[22px] border border-white/[0.08] p-5 transition duration-300 hover:-translate-y-1 hover:border-white/[0.15] sm:p-6">
               <div className={`landing-feature-icon landing-feature-${tone}`}><Icon className="h-5 w-5" /></div>
               <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">{eyebrow}</p>
               <h3 className="mt-2 text-lg font-semibold tracking-[-0.035em]">{title}</h3>
@@ -162,8 +166,8 @@ export default function LandingPage() {
       </section>
 
       <section className="relative z-[1] mx-auto flex max-w-7xl flex-col gap-8 px-5 py-16 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12 lg:py-20">
-        <div className="max-w-2xl"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f2bd55]">Take your team with you</p><h2 className="mt-3 text-3xl font-semibold tracking-[-0.06em] sm:text-4xl">One tap away, even on mobile.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/50">Install Bharat Meet from your browser. Get a home-screen app with room for conversations, live meetups, voice notes, and reminders.</p></div>
-        <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+        <div className="max-w-2xl" data-reveal><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f2bd55]">Take your team with you</p><h2 className="mt-3 text-3xl font-semibold tracking-[-0.06em] sm:text-4xl">One tap away, even on mobile.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/50">Install Bharat Meet from your browser. Get a home-screen app with room for conversations, live meetups, voice notes, and reminders.</p></div>
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row" data-reveal>
           <PwaInstallButton variant="cta" />
           <a href="/setup" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06]">Use the web app <ArrowRight className="h-4 w-4" /></a>
         </div>
