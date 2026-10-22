@@ -71,7 +71,9 @@ export const apiLimiter = createLimiter("@bharatmeet/api", 20, "10 s", 10_000);
 export const messageLimiter = createLimiter("@bharatmeet/message", 10, "10 s", 10_000);
 
 // Rate limiter for server creation - 3 servers per hour
-export const serverCreationLimiter = createLimiter("@bharatmeet/server", 3, "1 h", 3_600_000);
+// Version the key prefix so users aren't locked out by quotas consumed by
+// earlier failed/invalid create attempts. Only validated create requests count.
+export const serverCreationLimiter = createLimiter("@bharatmeet/server:create-v2", 5, "1 h", 3_600_000);
 
 // Rate limiter for Socket.IO events - 30 events per 10 seconds
 export const socketEventLimiter = createLimiter("@bharatmeet/socket", 30, "10 s", 10_000);

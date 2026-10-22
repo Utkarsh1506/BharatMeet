@@ -10,9 +10,10 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: [
-      "uploadthing.com",
-      "utfs.io"
+    remotePatterns: [
+      { protocol: "https", hostname: "uploadthing.com", pathname: "/f/**" },
+      { protocol: "https", hostname: "utfs.io", pathname: "/f/**" },
+      { protocol: "https", hostname: "**.ufs.sh", pathname: "/f/**" }
     ]
   },
   async headers() {

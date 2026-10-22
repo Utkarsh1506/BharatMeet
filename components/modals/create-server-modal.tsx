@@ -27,6 +27,37 @@ import { FileUpload } from "@/components/file-upload";
 import { useRouter } from "next/navigation";
 import { useModal } from "@/hooks/use-modal-store";
 
+const getWorkspaceErrorMessage = (error: unknown) => {
+  if (!axios.isAxiosError(error)) {
+    return "We couldn’t create the workspace. Check your connection and try again.";
+  }
+
+  const status = error.response?.status;
+  if (status === 401) return "Your session expired. Refresh the page and sign in again.";
+  if (status === 429) return "You’ve created workspaces too quickly. Please wait before trying again.";
+  if (status === 503) return "Workspace creation is temporarily unavailable. Please try again shortly.";
+
+  let data: unknown = error.response?.data;
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      data = null;
+    }
+  }
+  if (data && typeof data === "object") {
+    const payload = data as Record<string, unknown>;
+    const nested = payload.error;
+    if (typeof nested === "string") return nested;
+    if (nested && typeof nested === "object" && "message" in nested && typeof nested.message === "string") {
+      return nested.message;
+    }
+    if (typeof payload.message === "string") return payload.message;
+  }
+
+  return "We couldn’t create the workspace. Check that its image finished uploading, then try again.";
+};
+
 const formSchema = z.object({
   name: z.string().min(1, {
     message: "Workspace name is required."
@@ -60,7 +91,7 @@ export const CreateServerModal = () => {
       router.refresh();
       onClose();
     } catch (error) {
-      console.log(error);
+      form.setError("root", { message: getWorkspaceErrorMessage(error) });
     }
   }
 
@@ -94,8 +125,10 @@ export const CreateServerModal = () => {
                           endpoint="serverImage"
                           value={field.value}
                           onChange={field.onChange}
+                          onUploadError={(error) => form.setError("imageUrl", { message: error.message })}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -124,6 +157,11 @@ export const CreateServerModal = () => {
                 )}
               />
             </div>
+            {form.formState.errors.root?.message && (
+              <p role="alert" className="px-6 text-sm text-destructive">
+                {form.formState.errors.root.message}
+              </p>
+            )}
             <DialogFooter className="bg-surface px-6 py-4">
               <Button variant="primary" disabled={isLoading}>
                 {isLoading ? "Creating…" : "Create workspace"}

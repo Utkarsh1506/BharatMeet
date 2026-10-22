@@ -64,23 +64,24 @@ export async function POST(req: Request) {
       return ApiErrors.unauthorized();
     }
 
-    // Apply rate limiting for server creation
-    const rateLimitResult = await checkRateLimit(serverCreationLimiter, profile.id);
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: "Too many servers created. Please try again later." },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(rateLimitResult)
-        }
-      );
-    }
-
     const body = await req.json().catch(() => null);
     const result = serverSchema.safeParse(body);
 
     if (!result.success) {
       return handleApiError(result.error);
+    }
+
+    // Only validated requests count against the quota. Invalid forms and
+    // incomplete image uploads must not consume workspace creation attempts.
+    const rateLimitResult = await checkRateLimit(serverCreationLimiter, profile.id);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "You have reached the workspace creation limit. Please try again later." },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      );
     }
 
     const server = await db.server.create({

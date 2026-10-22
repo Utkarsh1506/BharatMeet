@@ -93,6 +93,11 @@ describe("Input Sanitization", () => {
       expect(result).toBe(input);
     });
 
+    it("should allow current UploadThing tenant CDN URLs", () => {
+      const input = "https://a1b2c3d4e5.ufs.sh/f/abc123.png";
+      expect(sanitizeFileUrl(input)).toBe(input);
+    });
+
     it("should reject non-HTTPS URLs", () => {
       const input = "http://uploadthing.com/f/abc123.png";
       const result = sanitizeFileUrl(input);
@@ -108,6 +113,9 @@ describe("Input Sanitization", () => {
     it("should reject lookalike domains that contain a trusted hostname", () => {
       expect(sanitizeFileUrl("https://uploadthing.com.attacker.example/file.png")).toBeNull();
       expect(sanitizeFileUrl("https://notutfs.io/file.png")).toBeNull();
+      expect(sanitizeFileUrl("https://ufs.sh/f/abc123.png")).toBeNull();
+      expect(sanitizeFileUrl("https://a1b2c3d4e5.ufs.sh.attacker.example/f/abc123.png")).toBeNull();
+      expect(sanitizeFileUrl("https://a1b2c3d4e5.ufs.sh/a/abc123.png")).toBeNull();
     });
 
     it("should handle null input", () => {

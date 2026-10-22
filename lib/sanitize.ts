@@ -112,7 +112,11 @@ export function sanitizeFileUrl(url: string | null | undefined): string | null {
     // Match trusted hostnames exactly. Substring checks also trust domains
     // such as uploadthing.com.attacker.example.
     const hostname = parsed.hostname.toLowerCase();
-    if (hostname === "uploadthing.com" || hostname === "utfs.io") {
+    const isUploadThingHost =
+      hostname === "uploadthing.com" ||
+      hostname === "utfs.io" ||
+      /^[a-z0-9-]+\.ufs\.sh$/.test(hostname);
+    if (isUploadThingHost && /^\/f\/[^/]+$/.test(parsed.pathname)) {
       return url;
     }
 
