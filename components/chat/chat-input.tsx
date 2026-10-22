@@ -271,7 +271,7 @@ export const ChatInput = ({
         </div>
       )}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="z-20 mx-auto w-full max-w-[1120px] px-3 pb-5 sm:px-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="z-20 mx-auto w-full max-w-[1120px] px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
         <div className="mb-2 flex items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.65)]" />
           <span>{type === "conversation" ? "Direct message · just between you two" : `Room message · #${name}`}</span>

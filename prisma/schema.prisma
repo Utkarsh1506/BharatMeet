@@ -25,6 +25,8 @@ model Profile {
   members                Member[]
   channels               Channel[]
   notifications          Notification[]
+  reminders              Reminder[]
+  pushSubscriptions       PushSubscription[]
 }
 
 model Server {
@@ -132,6 +134,35 @@ model Notification {
   @@index([profileId, read])
   @@index([profileId, createdAt(sort: Desc)])
   @@index([profileId, read, createdAt(sort: Desc)])
+}
+
+model Reminder {
+  id          String    @id @default(uuid())
+  profileId   String
+  title       String    @db.VarChar(160)
+  dueAt       DateTime
+  link        String    @default("/") @db.VarChar(500)
+  sentAt      DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, dueAt])
+  @@index([dueAt, sentAt, completedAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  profileId String
+  endpoint  String   @unique @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
 }
 
 model Conversation {

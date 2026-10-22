@@ -126,7 +126,7 @@ export const NotificationsPanel = ({
         <Button
           variant="outline"
           size="icon"
-          className="relative h-10 w-10 rounded-xl border border-border bg-surface text-muted-foreground hover:border-primary/30 hover:bg-surface-hover hover:text-foreground"
+          className="relative h-11 w-11 shrink-0 rounded-xl border border-border bg-surface text-muted-foreground hover:border-primary/30 hover:bg-surface-hover hover:text-foreground sm:h-10 sm:w-10"
         >
           <Bell className="h-[1.1rem] w-[1.1rem]" />
           {unreadCount > 0 && (
@@ -137,7 +137,7 @@ export const NotificationsPanel = ({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl">
+      <DropdownMenuContent align="end" collisionPadding={10} className="w-[min(20rem,calc(100vw-1.25rem))] rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl">
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
           <p className="text-sm font-semibold text-foreground">
             Notifications{isLoading ? "..." : ""}

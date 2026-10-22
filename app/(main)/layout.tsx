@@ -19,10 +19,10 @@ const MainLayout = async ({
 
   return (
     <div className="h-full min-h-0 min-w-0">
-      <div className="fixed inset-x-0 top-0 z-50 h-16">
+      <div className="fixed inset-x-0 top-[env(safe-area-inset-top)] z-50 h-16">
         <NavigationSidebar servers={servers} />
       </div>
-      <div className="h-full min-h-0 min-w-0 pt-16">
+      <div className="h-full min-h-0 min-w-0 pt-[calc(4rem+env(safe-area-inset-top))]">
         <ServerNavigationProvider servers={servers}>
           {children}
         </ServerNavigationProvider>

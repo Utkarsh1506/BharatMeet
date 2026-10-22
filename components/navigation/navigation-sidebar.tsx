@@ -9,6 +9,8 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { PresenceStatus } from "@/components/presence-status";
 import { NavigationAction } from "./navigation-action";
+import { ReminderCenter } from "@/components/reminder-center";
+import { PwaInstallButton } from "@/components/pwa-install-button";
 
 interface NavigationSidebarProps {
   servers: Array<{ id: string; name: string; imageUrl: string }>;
@@ -18,7 +20,7 @@ export const NavigationSidebar = ({ servers = [] }: NavigationSidebarProps) => {
   const pathname = usePathname();
 
   return (
-    <header className="flex h-16 w-full items-center gap-2 border-b border-border/70 bg-sidebar/95 px-2.5 backdrop-blur-xl sm:gap-3 sm:px-5">
+    <header className="flex h-16 w-full items-center gap-1.5 border-b border-border/70 bg-sidebar/95 px-2.5 backdrop-blur-xl sm:gap-3 sm:px-5">
       <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label="Bharat Meet home">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-[10px] font-black tracking-[0.12em] text-primary-foreground shadow-md shadow-primary/15 transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-105">
           BM
@@ -60,12 +62,14 @@ export const NavigationSidebar = ({ servers = [] }: NavigationSidebarProps) => {
         })}
       </nav>
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <NavigationAction />
+        <PwaInstallButton />
+        <ReminderCenter />
         <div className="hidden md:!block">
           <PresenceStatus />
         </div>
-        <div className="hidden sm:!block"><NotificationsPanel initialNotifications={[]} /></div>
+        <NotificationsPanel initialNotifications={[]} />
         <div className="hidden sm:!block"><ModeToggle /></div>
         <UserButton
           afterSignOutUrl="/"

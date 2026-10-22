@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { sendWebPush, webPushConfigured } from "@/lib/web-push";
 
 interface MentionProfile {
   id: string;
@@ -54,14 +55,37 @@ export const createMentionNotifications = async ({
     return 0;
   }
 
-  await db.notification.createMany({
-    data: Array.from(mentionedProfileIds).map((profileId) => ({
+  const notifications = Array.from(mentionedProfileIds).map((profileId) => ({
       profileId,
       title: "You were mentioned",
       content: `${authorName} mentioned you in a chat`,
       link,
-    })),
-  });
+    }));
+
+  await db.notification.createMany({ data: notifications });
+
+  if (webPushConfigured) {
+    const subscriptions = await db.pushSubscription.findMany({
+      where: { profileId: { in: Array.from(mentionedProfileIds) } },
+      select: { endpoint: true, p256dh: true, auth: true },
+    });
+    const outcomes = await Promise.allSettled(subscriptions.map((subscription) => sendWebPush({
+      endpoint: subscription.endpoint,
+      keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+    }, {
+      title: "You were mentioned · Bharat Meet",
+      body: `${authorName} mentioned you in a chat`,
+      url: link,
+      tag: `mention-${Date.now()}`,
+    })));
+    const expired = outcomes.flatMap((outcome, index) => outcome.status === "rejected" &&
+      (outcome.reason?.statusCode === 404 || outcome.reason?.statusCode === 410)
+      ? [subscriptions[index].endpoint]
+      : []);
+    if (expired.length) {
+      await db.pushSubscription.deleteMany({ where: { endpoint: { in: expired } } });
+    }
+  }
 
   return mentionedProfileIds.size;
 };

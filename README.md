@@ -17,6 +17,8 @@ Features:
 - Server creation and customization
 - Beautiful UI using TailwindCSS and ShadcnUI
 - Full responsivity and mobile UI
+- Installable mobile PWA with device push alerts
+- Personal reminders with scheduled notifications
 - Light / Dark mode
 - Websocket fallback: Polling with alerts
 - ORM using Prisma
@@ -65,9 +67,23 @@ NEXT_PUBLIC_LIVEKIT_URL=
 # Required for production; development can use the in-memory fallback
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
+
+# Optional web push notifications (generate with `npx web-push generate-vapid-keys`)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@your-domain.com
+
+# Background reminder delivery (Upstash QStash)
+QSTASH_TOKEN=
+QSTASH_CURRENT_SIGNING_KEY=
+QSTASH_NEXT_SIGNING_KEY=
 ```
 
 **Note**: The application includes rate limiting to prevent abuse. It uses an in-memory fallback only in development. Production startup requires Upstash Redis credentials and `NEXT_PUBLIC_SITE_URL`, so rate limits and realtime origin checks remain consistent across instances.
+
+### Mobile PWA and scheduled alerts
+
+The app can be installed from a supported mobile browser using **Install Bharat Meet** (on iOS Safari, use Share → Add to Home Screen). It uses the same signed-in account and APIs as the desktop app. To deliver push alerts when the app is closed, create a VAPID key pair with `npx web-push generate-vapid-keys`, add the public/private keys and a `mailto:` subject to the deployment environment, and add the QStash token plus current/next signing keys from Upstash. Scheduled delivery uses signed, one-shot QStash messages rather than frequent Vercel Cron jobs, so it works on Vercel Hobby deployments too. Reminders created without QStash are saved and alert while the app is open; @mentions and fired reminders are saved in the in-app notification center. Push keys are optional for installation and in-app reminders.
 
 ### Setup Prisma
 
@@ -84,6 +100,12 @@ direct-message reaction tables. Existing environments can use `npm run db:push`
 for schema synchronization, then run `npm run db:generate` after schema changes.
 For a fresh production database, establish the baseline schema before applying
 the incremental migration in `prisma/migrations`.
+
+Before deploying the mobile reminder feature, apply the added `Reminder` and
+`PushSubscription` tables to the target database. For an existing database that
+is managed with `db:push`, run `npm run db:push` with its `DATABASE_URL` set to
+that database; for a migration-managed database, apply the new migration after
+the existing migration baseline is established.
 
 ### Start the app
 
@@ -123,6 +145,16 @@ Import the repository into Vercel. The included `vercel.json` uses `npm ci` and
 `npm run build`. Add every variable from `.env.example` in the Vercel project
 settings, using production values for Clerk, PostgreSQL, UploadThing, and
 LiveKit.
+
+For Clerk Frontend API proxying, set `NEXT_PUBLIC_CLERK_PROXY_URL` to
+`/__clerk/` in the Vercel environment, then deploy the proxy route before
+enabling it in Clerk. In the Clerk production instance, set the Frontend API
+proxy URL to `https://<your-production-domain>/__clerk`. The app forwards this
+path to the Frontend API and supplies the server-only Clerk secret and trusted
+client IP. Keep Vercel's `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
+`CLERK_SECRET_KEY` set to the matching live-instance keys. Add and verify a
+custom Clerk domain and its DNS records in the Clerk Dashboard if you need
+branded authentication and Account Portal URLs.
 
 Vercel hosts the Next.js application and HTTP API routes, but its serverless
 runtime does not provide a persistent Socket.IO process. Keep the current
