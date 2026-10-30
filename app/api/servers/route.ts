@@ -1,31 +1,15 @@
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
 import { MemberRole } from "@prisma/client";
-import { z } from "zod";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { checkRateLimit, serverCreationLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
-import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize";
 import { apiLogger } from "@/lib/logger";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
+import { workspaceSchema } from "@/lib/workspace-schema";
 
 export const dynamic = "force-dynamic";
-
-const serverSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Server name must be at least 2 characters.")
-    .max(80)
-    .transform((val) => sanitizeName(val))
-    .pipe(z.string().min(2).max(80)),
-  imageUrl: z
-    .string()
-    .url("A valid server image is required.")
-    .max(2048)
-    .refine((value) => sanitizeFileUrl(value) !== null, "Use an image uploaded through UploadThing"),
-});
 
 export async function GET() {
   try {
@@ -65,7 +49,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
-    const result = serverSchema.safeParse(body);
+    const result = workspaceSchema.safeParse(body);
 
     if (!result.success) {
       return handleApiError(result.error);

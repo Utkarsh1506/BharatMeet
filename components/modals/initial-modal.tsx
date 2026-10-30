@@ -29,12 +29,8 @@ import { FileUpload } from "@/components/file-upload";
 import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: "Server name is required.",
-  }),
-  imageUrl: z.string().min(1, {
-    message: "Server image is required.",
-  }),
+  name: z.string().trim().min(2, { message: "Workspace name must be at least 2 characters." }).max(80),
+  imageUrl: z.string(),
 });
 
 const starterTemplates = [
@@ -77,7 +73,7 @@ const getWorkspaceErrorMessage = (error: unknown) => {
     if (typeof data.message === "string") return data.message;
   }
 
-  return "We couldn't create your workspace right now. Please try again.";
+  return "We couldn’t create the workspace right now. Check your connection and try again; adding an image is optional.";
 };
 
 export const InitialModal = () => {
@@ -124,7 +120,7 @@ export const InitialModal = () => {
             Build your first workspace
           </DialogTitle>
           <DialogDescription className="text-center text-sm text-muted-foreground">
-            Start a focused space for your team, community, or next big idea.
+            Name your space now; add a workspace image whenever you’re ready.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,6 +133,7 @@ export const InitialModal = () => {
                   name="imageUrl"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="section-kicker">Workspace image · optional</FormLabel>
                       <FormControl>
                         <FileUpload
                           endpoint="serverImage"
@@ -147,6 +144,7 @@ export const InitialModal = () => {
                           }
                         />
                       </FormControl>
+                      <FormMessage className="text-xs text-rose-300" />
                     </FormItem>
                   )}
                 />

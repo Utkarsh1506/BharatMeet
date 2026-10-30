@@ -55,16 +55,12 @@ const getWorkspaceErrorMessage = (error: unknown) => {
     if (typeof payload.message === "string") return payload.message;
   }
 
-  return "We couldn’t create the workspace. Check that its image finished uploading, then try again.";
+  return "We couldn’t create the workspace. Check your connection and try again; adding an image is optional.";
 };
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: "Workspace name is required."
-  }),
-  imageUrl: z.string().min(1, {
-    message: "Workspace image is required."
-  })
+  name: z.string().trim().min(2, { message: "Workspace name must be at least 2 characters." }).max(80),
+  imageUrl: z.string(),
 });
 
 export const CreateServerModal = () => {
@@ -108,7 +104,7 @@ export const CreateServerModal = () => {
             Customize your workspace
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
-            Give your workspace a name and image. You can change them later.
+          Give your workspace a name. Add an image if you’d like.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -120,6 +116,9 @@ export const CreateServerModal = () => {
                   name="imageUrl"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-secondary/70">
+                        Workspace image · optional
+                      </FormLabel>
                       <FormControl>
                         <FileUpload
                           endpoint="serverImage"

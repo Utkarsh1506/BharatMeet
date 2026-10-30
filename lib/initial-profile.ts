@@ -34,24 +34,18 @@ export const initialProfile = async () => {
     return redirect("/sign-in");
   }
 
-  const profile = await db.profile.findUnique({
-    where: {
-      userId: user.id,
-    },
-  });
-
-  if (profile) {
-    return profile;
-  }
-
-  const newProfile = await db.profile.create({
-    data: {
+  // Setup can be requested by overlapping server renders after sign-up.
+  // Upsert makes profile initialization atomic and safe to retry.
+  return db.profile.upsert({
+    where: { userId: user.id },
+    create: {
       userId: user.id,
       name: buildProfileName(user),
       imageUrl: user.imageUrl,
-      email: user.emailAddresses[0]?.emailAddress ?? `${user.id}@local.user`,
+      email: user.primaryEmailAddress?.emailAddress
+        ?? user.emailAddresses[0]?.emailAddress
+        ?? `${user.id}@local.user`,
     },
+    update: {},
   });
-
-  return newProfile;
 };
