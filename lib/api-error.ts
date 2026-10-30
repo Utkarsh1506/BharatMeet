@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { randomUUID } from "node:crypto";
+import { apiLogger } from "@/lib/logger";
 
 /**
  * Standard API error response format
@@ -10,6 +12,7 @@ export interface ApiErrorResponse {
     code: string;
     details?: unknown;
     timestamp: string;
+    requestId: string;
   };
 }
 
@@ -67,13 +70,15 @@ export function createErrorResponse(
   code: ErrorCode,
   message: string,
   details?: unknown,
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
+  requestId = randomUUID(),
 ): NextResponse<ApiErrorResponse> {
   const response: ApiErrorResponse = {
     error: {
       message,
       code,
       timestamp: new Date().toISOString(),
+      requestId,
     },
   };
   
@@ -81,13 +86,16 @@ export function createErrorResponse(
     response.error.details = details;
   }
 
-  return NextResponse.json(response, { status: statusCode, headers });
+  return NextResponse.json(response, {
+    status: statusCode,
+    headers: { ...headers, "X-Request-ID": requestId },
+  });
 }
 
 /**
  * Handle Zod validation errors
  */
-export function handleZodError(error: ZodError): NextResponse<ApiErrorResponse> {
+export function handleZodError(error: ZodError, requestId = randomUUID()): NextResponse<ApiErrorResponse> {
   const firstError = error.errors[0];
   const message = firstError?.message || "Validation failed";
 
@@ -100,21 +108,25 @@ export function handleZodError(error: ZodError): NextResponse<ApiErrorResponse> 
         path: err.path.join("."),
         message: err.message,
       })),
-    }
+    },
+    undefined,
+    requestId,
   );
 }
 
 /**
  * Handle Prisma errors
  */
-export function handlePrismaError(error: any): NextResponse<ApiErrorResponse> {
+export function handlePrismaError(error: any, requestId = randomUUID()): NextResponse<ApiErrorResponse> {
   // Prisma unique constraint violation
   if (error.code === "P2002") {
     return createErrorResponse(
       409,
       ErrorCodes.ALREADY_EXISTS,
       "A record with this value already exists",
-      { fields: error.meta?.target }
+      { fields: error.meta?.target },
+      undefined,
+      requestId,
     );
   }
 
@@ -123,7 +135,10 @@ export function handlePrismaError(error: any): NextResponse<ApiErrorResponse> {
     return createErrorResponse(
       404,
       ErrorCodes.NOT_FOUND,
-      "Record not found"
+      "Record not found",
+      undefined,
+      undefined,
+      requestId,
     );
   }
 
@@ -132,7 +147,10 @@ export function handlePrismaError(error: any): NextResponse<ApiErrorResponse> {
     return createErrorResponse(
       400,
       ErrorCodes.BAD_REQUEST,
-      "Invalid reference to related record"
+      "Invalid reference to related record",
+      undefined,
+      undefined,
+      requestId,
     );
   }
 
@@ -140,7 +158,10 @@ export function handlePrismaError(error: any): NextResponse<ApiErrorResponse> {
   return createErrorResponse(
     500,
     ErrorCodes.DATABASE_ERROR,
-    "Database operation failed"
+    "Database operation failed",
+    undefined,
+    undefined,
+    requestId,
   );
 }
 
@@ -148,29 +169,36 @@ export function handlePrismaError(error: any): NextResponse<ApiErrorResponse> {
  * Central error handler for API routes
  * Use this in try-catch blocks for consistent error handling
  */
-export function handleApiError(error: unknown): NextResponse<ApiErrorResponse> {
+export function handleApiError(error: unknown, requestId = randomUUID()): NextResponse<ApiErrorResponse> {
   // Handle ApiError
   if (error instanceof ApiError) {
+    if (error.statusCode >= 500) apiLogger.error({ err: error, requestId }, "API request failed");
     return createErrorResponse(
       error.statusCode,
       error.code,
       error.message,
-      error.details
+      error.details,
+      undefined,
+      requestId,
     );
   }
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
-    return handleZodError(error);
+    return handleZodError(error, requestId);
   }
 
   // Handle Prisma errors
   if (error && typeof error === "object" && "code" in error) {
-    return handlePrismaError(error);
+    if (!(["P2002", "P2025", "P2003"] as unknown[]).includes(error.code)) {
+      apiLogger.error({ err: error, requestId }, "Database API request failed");
+    }
+    return handlePrismaError(error, requestId);
   }
 
   // Handle generic errors
   if (error instanceof Error) {
+    apiLogger.error({ err: error, requestId }, "Unhandled API request error");
     // Don't expose internal error messages in production
     const message = process.env.NODE_ENV === "production"
       ? "An internal error occurred"
@@ -179,15 +207,22 @@ export function handleApiError(error: unknown): NextResponse<ApiErrorResponse> {
     return createErrorResponse(
       500,
       ErrorCodes.INTERNAL_ERROR,
-      message
+      message,
+      undefined,
+      undefined,
+      requestId,
     );
   }
 
+  apiLogger.error({ error, requestId }, "Unknown API request error");
   // Unknown error type
   return createErrorResponse(
     500,
     ErrorCodes.INTERNAL_ERROR,
-    "An unexpected error occurred"
+    "An unexpected error occurred",
+    undefined,
+    undefined,
+    requestId,
   );
 }
 

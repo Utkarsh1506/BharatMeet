@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { MemberRole } from "@prisma/client";
 
@@ -35,8 +36,9 @@ export async function GET() {
 
     return NextResponse.json({ servers });
   } catch (error) {
-    apiLogger.error({ error }, "Failed to list workspaces");
-    return handleApiError(error);
+    const requestId = randomUUID();
+    apiLogger.error({ err: error, requestId }, "Failed to list workspaces");
+    return handleApiError(error, requestId);
   }
 }
 
@@ -59,12 +61,9 @@ export async function POST(req: Request) {
     // incomplete image uploads must not consume workspace creation attempts.
     const rateLimitResult = await checkRateLimit(serverCreationLimiter, profile.id);
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: "You have reached the workspace creation limit. Please try again later." },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(rateLimitResult)
-        }
+      return ApiErrors.rateLimitExceeded(
+        "You have reached the workspace creation limit. Please try again later.",
+        getRateLimitHeaders(rateLimitResult),
       );
     }
 
@@ -89,7 +88,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(server, { headers: getRateLimitHeaders(rateLimitResult) });
   } catch (error) {
-    apiLogger.error({ error }, "Failed to create server");
-    return handleApiError(error);
+    const requestId = randomUUID();
+    apiLogger.error({ err: error, requestId }, "Failed to create workspace");
+    return handleApiError(error, requestId);
   }
 }

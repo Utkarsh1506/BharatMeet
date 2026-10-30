@@ -9,6 +9,7 @@ import { ModalProvider } from '@/components/providers/modal-provider'
 import { SocketProvider } from '@/components/providers/socket-provider'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { PwaRegister } from '@/components/providers/pwa-register'
+import { ErrorReportingProvider } from '@/components/providers/error-reporting-provider'
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -43,22 +44,24 @@ export default function RootLayout({
         font.variable,
         "min-h-screen bg-background text-foreground"
       )}>
-        <ClerkProvider dynamic proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL || "/__clerk/"}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            storageKey="bharatmeet-theme"
-          >
-            <SocketProvider>
-              <ModalProvider />
-              <PwaRegister />
-              <QueryProvider>
-                {children}
-              </QueryProvider>
-            </SocketProvider>
-          </ThemeProvider>
-        </ClerkProvider>
+        <ErrorReportingProvider>
+          <ClerkProvider dynamic proxyUrl={process.env.NEXT_PUBLIC_CLERK_PROXY_URL || "/__clerk/"}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={false}
+              storageKey="bharatmeet-theme"
+            >
+              <SocketProvider>
+                <ModalProvider />
+                <PwaRegister />
+                <QueryProvider>
+                  {children}
+                </QueryProvider>
+              </SocketProvider>
+            </ThemeProvider>
+          </ClerkProvider>
+        </ErrorReportingProvider>
       </body>
     </html>
   )

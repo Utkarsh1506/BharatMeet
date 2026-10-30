@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 
 import { db } from "@/lib/db";
+import { dbLogger } from "@/lib/logger";
 
 export const currentProfile = async () => {
   const { userId } = await auth();
@@ -17,7 +18,8 @@ export const currentProfile = async () => {
     });
 
     return profile;
-  } catch {
-    return null;
+  } catch (error) {
+    dbLogger.error({ err: error, userId }, "Failed to load the signed-in user's profile");
+    throw error;
   }
 }

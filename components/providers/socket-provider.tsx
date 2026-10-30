@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { io as ClientIO, Socket } from "socket.io-client";
+import { reportClientError } from "@/lib/report-client-error";
 
 export type PresenceStatus = "online" | "away" | "dnd" | "offline";
 
@@ -51,6 +52,14 @@ export const SocketProvider = ({
   const handleDisconnect = useCallback(() => {
     setIsConnected(false);
     setPresenceByUserId({});
+  }, []);
+
+  const handleConnectError = useCallback((error: Error) => {
+    reportClientError({
+      title: "Live updates connection failed",
+      message: error.message || error.name || "Socket.IO connection failed",
+      details: error.stack || error.message,
+    });
   }, []);
 
   const handlePresenceState = useCallback(({ users }: { users: Array<{ userId: string; status: PresenceStatus }> }) => {
@@ -104,6 +113,7 @@ export const SocketProvider = ({
         // Attach event listeners
         socketInstance.on("connect", handleConnect);
         socketInstance.on("disconnect", handleDisconnect);
+        socketInstance.on("connect_error", handleConnectError);
         socketInstance.on("presence:state", handlePresenceState);
 
         socketRef.current = socketInstance;
@@ -112,10 +122,12 @@ export const SocketProvider = ({
           setSocket(socketInstance);
         }
       } catch (error) {
-        // Only log in development to avoid polluting production logs
-        if (process.env.NODE_ENV === 'development') {
-          console.error("[SOCKET_CONNECTION_ERROR]", error);
-        }
+        const message = error instanceof Error ? error.message : String(error);
+        reportClientError({
+          title: "Live updates could not start",
+          message,
+          details: error instanceof Error ? error.stack || message : message,
+        });
       } finally {
         isConnecting.current = false;
       }
@@ -131,6 +143,7 @@ export const SocketProvider = ({
         // Remove all event listeners to prevent memory leaks
         socketInstance.off("connect", handleConnect);
         socketInstance.off("disconnect", handleDisconnect);
+        socketInstance.off("connect_error", handleConnectError);
         socketInstance.off("presence:state", handlePresenceState);
 
         // Disconnect the socket
@@ -140,7 +153,7 @@ export const SocketProvider = ({
 
       isConnecting.current = false;
     };
-  }, [isLoaded, getToken, handleConnect, handleDisconnect, handlePresenceState]);
+  }, [isLoaded, getToken, handleConnect, handleDisconnect, handleConnectError, handlePresenceState]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, presenceByUserId }}>

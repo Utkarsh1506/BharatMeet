@@ -47,6 +47,8 @@ describe("API Error Handling", () => {
       expect(body.error.timestamp).toBeDefined();
       expect(body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
       expect(body.error.message).toBe("Internal error");
+      expect(body.error.requestId).toBeTruthy();
+      expect(response.headers.get("X-Request-ID")).toBe(body.error.requestId);
     });
 
     it("should include optional details", async () => {
@@ -96,12 +98,14 @@ describe("API Error Handling", () => {
 
     it("should handle generic Error instances", async () => {
       const error = new Error("Something went wrong");
-      const response = handleApiError(error);
+      const response = handleApiError(error, "support-test-123");
 
       expect(response.status).toBe(500);
 
       const body = await response.json();
       expect(body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+      expect(body.error.requestId).toBe("support-test-123");
+      expect(response.headers.get("X-Request-ID")).toBe("support-test-123");
     });
 
     it("should handle unknown error types", async () => {
