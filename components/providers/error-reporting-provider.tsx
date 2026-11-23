@@ -105,9 +105,20 @@ class UiErrorBoundary extends Component<
 const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; onClose: () => void; onClear: () => void }) => {
   const [copied, setCopied] = useState(false);
   const [filter, setFilter] = useState<"all" | "workspace">("all");
+  const [expandedReportIds, setExpandedReportIds] = useState<Set<string>>(() => new Set());
   const visibleReports = filter === "all"
     ? reports
     : reports.filter((report) => /workspace|\/api\/servers/i.test(`${report.title}\n${report.details}`));
+  const allVisibleExpanded = visibleReports.length > 0 && visibleReports.every((report) => expandedReportIds.has(report.id));
+
+  const toggleReportDetails = (reportId: string) => {
+    setExpandedReportIds((current) => {
+      const next = new Set(current);
+      if (next.has(reportId)) next.delete(reportId);
+      else next.add(reportId);
+      return next;
+    });
+  };
 
   const copyDetails = async () => {
     try {
@@ -137,6 +148,17 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
         <button type="button" onClick={() => setFilter("all")} aria-pressed={filter === "all"} className={`rounded-full px-3 py-1 text-xs font-medium ${filter === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-hover"}`}>All issues</button>
         <button type="button" onClick={() => setFilter("workspace")} aria-pressed={filter === "workspace"} className={`rounded-full px-3 py-1 text-xs font-medium ${filter === "workspace" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-hover"}`}>Workspace creation</button>
       </div>
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+        <span className="text-xs text-muted-foreground">{visibleReports.length} shown</span>
+        <button
+          type="button"
+          disabled={!visibleReports.length}
+          onClick={() => setExpandedReportIds(allVisibleExpanded ? new Set() : new Set(visibleReports.map((report) => report.id)))}
+          className="rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-surface-hover disabled:opacity-40"
+        >
+          {allVisibleExpanded ? "Collapse all" : "Expand all"}
+        </button>
+      </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         {!visibleReports.length && <p className="p-5 text-center text-sm text-muted-foreground">{filter === "workspace" ? "No workspace creation errors are in this log yet." : "No errors have been captured on this device."}</p>}
         {visibleReports.map((report) => (
@@ -151,10 +173,18 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
                 <Copy className="h-4 w-4" />
               </button>
             </div>
-            <details className="mt-2">
-              <summary className="cursor-pointer text-xs font-medium text-primary">Show exact details</summary>
-              <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-card p-3 text-[11px] text-muted-foreground">{report.details || report.message}</pre>
-            </details>
+            <button
+              type="button"
+              aria-expanded={expandedReportIds.has(report.id)}
+              aria-controls={`error-details-${report.id}`}
+              onClick={() => toggleReportDetails(report.id)}
+              className="mt-2 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {expandedReportIds.has(report.id) ? "Hide exact details" : "Show exact details"}
+            </button>
+            {expandedReportIds.has(report.id) && (
+              <pre id={`error-details-${report.id}`} className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-card p-3 text-[11px] text-muted-foreground">{report.details || report.message}</pre>
+            )}
           </article>
         ))}
       </div>
