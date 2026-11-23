@@ -63,6 +63,30 @@ const formatDiagnosticValue = (value: unknown) => {
 const getReportText = (report: ErrorReport) =>
   `${report.title}\n${report.message}\nOccurred: ${report.occurredAt}\n\n${report.details}`;
 
+const copyText = async (text: string) => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall back for browsers that block Clipboard API access.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  return copied;
+};
+
 class UiErrorBoundary extends Component<
   { children: React.ReactNode; reportError: ReportError },
   { failed: boolean }
@@ -103,7 +127,7 @@ class UiErrorBoundary extends Component<
 }
 
 const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; onClose: () => void; onClear: () => void }) => {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [filter, setFilter] = useState<"all" | "workspace">("all");
   const [expandedReportIds, setExpandedReportIds] = useState<Set<string>>(() => new Set());
   const visibleReports = filter === "all"
@@ -121,16 +145,12 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
   };
 
   const copyDetails = async () => {
-    try {
-      await navigator.clipboard.writeText(reports.map(getReportText).join("\n\n---\n\n"));
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+    const copied = await copyText(reports.map(getReportText).join("\n\n---\n\n"));
+    setCopyStatus(copied ? "copied" : "failed");
   };
 
   return (
-    <section id="bharatmeet-error-log" aria-label="Error log" className="fixed bottom-16 right-4 z-[9999] flex max-h-[75vh] w-[min(38rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-rose-400/40 bg-card text-card-foreground shadow-2xl shadow-black/40">
+    <section id="bharatmeet-error-log" aria-label="Error log" className="pointer-events-auto fixed bottom-16 right-4 z-[10001] flex max-h-[75vh] w-[min(38rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-rose-400/40 bg-card text-card-foreground shadow-2xl shadow-black/40">
       <div className="flex items-center gap-3 border-b border-border p-4">
         <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
         <div className="min-w-0 flex-1">
@@ -169,7 +189,7 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">{report.message}</p>
                 <time className="mt-2 block text-[11px] text-muted-foreground">{report.occurredAt}{(report.occurrences || 1) > 1 ? ` · repeated ${report.occurrences} times` : ""}</time>
               </div>
-              <button type="button" onClick={() => navigator.clipboard.writeText(getReportText(report)).then(() => setCopied(true)).catch(() => setCopied(false))} aria-label="Copy this error" className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-surface-hover hover:text-foreground">
+              <button type="button" onClick={async () => setCopyStatus(await copyText(getReportText(report)) ? "copied" : "failed")} aria-label="Copy this error" className="pointer-events-auto shrink-0 rounded-md p-2 text-muted-foreground hover:bg-surface-hover hover:text-foreground">
                 <Copy className="h-4 w-4" />
               </button>
             </div>
@@ -191,7 +211,7 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
       <div className="flex items-center justify-between gap-3 border-t border-border p-3">
         <p className="text-[11px] leading-4 text-muted-foreground">Server errors include a support ID. Match it in Vercel function logs.</p>
         <button type="button" onClick={copyDetails} disabled={!reports.length} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-surface-hover disabled:opacity-40">
-          <Copy className="h-3.5 w-3.5" /> {copied ? "Copied" : "Copy all"}
+          <Copy className="h-3.5 w-3.5" /> {copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy all"}
         </button>
       </div>
     </section>
@@ -435,7 +455,7 @@ export const ErrorReportingProvider = ({ children }: { children: React.ReactNode
       <UiErrorBoundary reportError={reportError}>{children}</UiErrorBoundary>
       {isLogOpen && <ErrorLogPanel reports={reports} onClose={() => setIsLogOpen(false)} onClear={clearReports} />}
       {!isLogOpen && (
-        <button type="button" onClick={() => setIsLogOpen(true)} aria-expanded={false} aria-controls="bharatmeet-error-log" className="fixed bottom-4 right-4 z-[9999] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xl shadow-black/30 transition hover:border-rose-400/50 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <button type="button" onClick={() => setIsLogOpen(true)} aria-expanded={false} aria-controls="bharatmeet-error-log" className="pointer-events-auto fixed bottom-4 right-4 z-[10001] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xl shadow-black/30 transition hover:border-rose-400/50 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Bug className="h-4 w-4 text-rose-400" /> Error log
           {reports.length > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{reports.length}</span>}
         </button>
