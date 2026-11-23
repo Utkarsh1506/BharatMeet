@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { useRouter } from "next/navigation";
+import { reportClientError } from "@/lib/report-client-error";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, { message: "Workspace name must be at least 2 characters." }).max(80),
@@ -47,33 +48,59 @@ const getWorkspaceErrorMessage = (error: unknown) => {
   }
 
   const status = error.response?.status;
-  if (status === 401) return "Your session expired. Refresh the page and sign in again.";
-  if (status === 429) return "You’ve created workspaces too quickly. Please wait and try again.";
+  const responseData = error.response?.data as { error?: { requestId?: string } } | undefined;
+  const requestId = error.response?.headers?.["x-request-id"] || responseData?.error?.requestId;
+  if (status === 401) return `Your session expired. Refresh the page and sign in again.${requestId ? ` Reference: ${requestId}` : ""}`;
+  if (status === 429) return `You’ve created workspaces too quickly. Please wait and try again.${requestId ? ` Reference: ${requestId}` : ""}`;
 
-  let responseData: unknown = error.response?.data;
+  let parsedResponse: unknown = error.response?.data;
 
   // Next.js and proxy failures sometimes return an HTML error page. Never
   // render that document inside the form; show a useful, safe message instead.
-  if (typeof responseData === "string") {
+  if (typeof parsedResponse === "string") {
     try {
-      responseData = JSON.parse(responseData);
+      parsedResponse = JSON.parse(parsedResponse);
     } catch {
-      responseData = null;
+      parsedResponse = null;
     }
   }
 
-  if (responseData && typeof responseData === "object") {
-    const data = responseData as Record<string, unknown>;
+  if (parsedResponse && typeof parsedResponse === "object") {
+    const data = parsedResponse as Record<string, unknown>;
     const nestedError = data.error;
-    if (typeof nestedError === "string") return nestedError;
+    if (typeof nestedError === "string") return `${nestedError}${requestId ? ` Reference: ${requestId}` : ""}`;
     if (nestedError && typeof nestedError === "object" && "message" in nestedError) {
       const message = nestedError.message;
-      if (typeof message === "string") return message;
+      if (typeof message === "string") return `${message}${requestId ? ` Reference: ${requestId}` : ""}`;
     }
-    if (typeof data.message === "string") return data.message;
+    if (typeof data.message === "string") return `${data.message}${requestId ? ` Reference: ${requestId}` : ""}`;
   }
 
-  return "We couldn’t create the workspace right now. Check your connection and try again; adding an image is optional.";
+  if (requestId) return `We couldn’t create the workspace right now. Reference: ${requestId}`;
+  if (!error.response) return "We couldn’t reach the workspace service. Check your connection and try again.";
+  return `Workspace creation failed (HTTP ${status || "unknown"}). Try again; if it repeats, open the Error log for details.`;
+};
+
+const getWorkspaceErrorDetails = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data;
+    const requestId = error.response?.headers?.["x-request-id"]
+      || (responseData && typeof responseData === "object" && "error" in responseData
+        ? (responseData as { error?: { requestId?: string } }).error?.requestId
+        : undefined);
+    return [
+      `Request: ${error.config?.method?.toUpperCase() || "POST"} ${error.config?.url || "/api/servers"}`,
+      `HTTP status: ${error.response?.status ?? "no response"}`,
+      error.code ? `Client error code: ${error.code}` : "",
+      requestId ? `Support ID: ${requestId}` : "",
+      `Message: ${error.message}`,
+      responseData ? `Response body: ${typeof responseData === "string" ? responseData.slice(0, 4000) : JSON.stringify(responseData, null, 2)}` : "No response body was received.",
+      error.stack || "",
+    ].filter(Boolean).join("\n");
+  }
+
+  if (error instanceof Error) return `${error.name}: ${error.message}\n${error.stack || ""}`;
+  return typeof error === "string" ? error : JSON.stringify(error) || "Unknown workspace creation error";
 };
 
 export const InitialModal = () => {
@@ -101,6 +128,13 @@ export const InitialModal = () => {
       form.reset();
       router.push(`/servers/${response.data.id}`);
     } catch (error) {
+      reportClientError({
+        title: "Workspace creation failed",
+        message: axios.isAxiosError(error)
+          ? `POST /api/servers failed${error.response?.status ? ` with HTTP ${error.response.status}` : " before receiving a response"}.`
+          : error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+        details: getWorkspaceErrorDetails(error),
+      });
       form.setError("root", { message: getWorkspaceErrorMessage(error) });
     }
   };
