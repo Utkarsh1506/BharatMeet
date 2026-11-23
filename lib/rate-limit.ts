@@ -72,7 +72,7 @@ const createLimiter = (prefix: string, maxRequests: number, window: Duration, wi
         useLocalFallback = true;
         if (!hasLoggedFallback) {
           hasLoggedFallback = true;
-          console.error(`[rate-limit] Upstash unavailable for ${prefix}; using an instance-local fallback until this function restarts.`);
+          console.warn(`[rate-limit] Upstash unavailable for ${prefix}; using an instance-local fallback until this function restarts.`);
         }
         return localFallback.limit(identifier);
       }

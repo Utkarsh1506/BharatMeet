@@ -249,7 +249,6 @@ export const ErrorReportingProvider = ({ children }: { children: React.ReactNode
       }
       return [{ ...safeReport, occurrences: 1 }, ...current].slice(0, MAX_ERROR_LOGS);
     });
-    setIsLogOpen(true);
   }, []);
 
   useEffect(() => {
