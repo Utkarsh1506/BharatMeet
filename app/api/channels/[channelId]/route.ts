@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
-import { sanitizeName } from "@/lib/sanitize";
+import { sanitizeName } from "@/lib/sanitize-input";
 import { uuidSchema } from "@/lib/query-validation";
 import { apiLogger } from "@/lib/logger";
 import { isDefaultChannelName } from "@/lib/channel-name";

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
-import { sanitizeName } from "@/lib/sanitize";
+import { sanitizeName } from "@/lib/sanitize-input";
 import { apiLogger } from "@/lib/logger";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { uuidSchema } from "@/lib/query-validation";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize";
+import { sanitizeFileUrl, sanitizeName } from "@/lib/sanitize-input";
 
 export const DEFAULT_WORKSPACE_IMAGE = "/icons/icon-192.png";
 
