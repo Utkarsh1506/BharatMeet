@@ -46,14 +46,38 @@ export const createInMemoryRateLimiter = (prefix: string, maxRequests: number, w
 });
 
 const createLimiter = (prefix: string, maxRequests: number, window: Duration, windowMs: number): RateLimiter => {
-  if (!redis) return createInMemoryRateLimiter(prefix, maxRequests, windowMs);
+  const localFallback = createInMemoryRateLimiter(prefix, maxRequests, windowMs);
+  if (!redis) return localFallback;
 
-  return new Ratelimit({
+  const distributedLimiter = new Ratelimit({
     redis,
     limiter: Ratelimit.slidingWindow(maxRequests, window),
     analytics: true,
     prefix,
   });
+
+  // Vercel integrations can rotate or temporarily remove synced credentials.
+  // A Redis outage should degrade rate-limit scope, not take down workspace
+  // creation or every authenticated API with a 500.
+  let useLocalFallback = false;
+  let hasLoggedFallback = false;
+
+  return {
+    async limit(identifier) {
+      if (useLocalFallback) return localFallback.limit(identifier);
+
+      try {
+        return await distributedLimiter.limit(identifier);
+      } catch {
+        useLocalFallback = true;
+        if (!hasLoggedFallback) {
+          hasLoggedFallback = true;
+          console.error(`[rate-limit] Upstash unavailable for ${prefix}; using an instance-local fallback until this function restarts.`);
+        }
+        return localFallback.limit(identifier);
+      }
+    },
+  };
 };
 
 // Use Redis when configured and a per-process sliding window otherwise.
@@ -63,6 +87,10 @@ const redis = hasRateLimiting
       token: env.UPSTASH_REDIS_REST_TOKEN!,
     })
   : undefined;
+
+if (process.env.NODE_ENV === "production" && !hasRateLimiting) {
+  console.warn("[rate-limit] Upstash credentials are missing or invalid; using an instance-local fallback. Configure both HTTPS URL and token for distributed limits.");
+}
 
 // Rate limiter for general API requests - 20 requests per 10 seconds
 export const apiLimiter = createLimiter("@bharatmeet/api", 20, "10 s", 10_000);

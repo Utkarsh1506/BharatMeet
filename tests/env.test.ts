@@ -58,7 +58,7 @@ describe("Environment Validation", () => {
     });
   });
 
-  it("requires production Clerk, realtime, and distributed rate-limit configuration", () => {
+  it("allows production to start without optional Upstash credentials", () => {
     const result = envSchema.safeParse({
       NODE_ENV: "production",
       DATABASE_URL: "postgresql://db.example/app",
@@ -72,10 +72,19 @@ describe("Environment Validation", () => {
       NEXT_PUBLIC_SITE_URL: "https://meet.example",
     });
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.path[0] === "UPSTASH_REDIS_REST_URL")).toBe(true);
-    }
+    expect(result.success).toBe(true);
+  });
+
+  it("treats incomplete Upstash credentials as optional", () => {
+    const result = envSchema.safeParse({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://db.example/app",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_live_example",
+      CLERK_SECRET_KEY: "sk_live_example",
+      UPSTASH_REDIS_REST_URL: "https://redis.example",
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("trims surrounding whitespace from production Clerk keys", () => {

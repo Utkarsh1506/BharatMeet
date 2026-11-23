@@ -64,7 +64,8 @@ LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 NEXT_PUBLIC_LIVEKIT_URL=
 
-# Required for production; development can use the in-memory fallback
+# Optional; distributed rate limiting is used when configured. If unavailable,
+# the app continues with a per-instance fallback and logs a warning.
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
@@ -79,7 +80,7 @@ QSTASH_CURRENT_SIGNING_KEY=
 QSTASH_NEXT_SIGNING_KEY=
 ```
 
-**Note**: The application includes rate limiting to prevent abuse. It uses an in-memory fallback only in development. Production startup requires Upstash Redis credentials and `NEXT_PUBLIC_SITE_URL`, so rate limits and realtime origin checks remain consistent across instances.
+**Note**: The application includes rate limiting to prevent abuse. It uses Upstash for distributed limits when both credentials are valid. If Upstash is unavailable, it falls back to per-instance limits and keeps the app available; configure Upstash for consistent limits across serverless instances. `NEXT_PUBLIC_SITE_URL` is optional for app startup and is used by services that need a canonical public origin.
 
 ### Mobile PWA and scheduled alerts
 
@@ -142,9 +143,12 @@ fails.
 ### Deploy to Vercel
 
 Import the repository into Vercel. The included `vercel.json` uses `npm ci` and
-`npm run build`. Add every variable from `.env.example` in the Vercel project
-settings, using production values for Clerk, PostgreSQL, UploadThing, and
-LiveKit.
+`npm run build`. Configure the core Clerk and PostgreSQL values in the Vercel
+project settings. UploadThing and LiveKit values enable their respective
+features. Upstash is optional: when its integration variables are absent or
+temporarily invalid, the app falls back to per-instance rate limiting instead
+of failing every API route at startup. Configure both Upstash values to get
+distributed rate limits across Vercel instances.
 
 For Clerk Frontend API proxying, the app uses Clerk's built-in `frontendApiProxy`
 middleware at `/__clerk` (`@clerk/nextjs` 7 and Next.js 15). In the Clerk

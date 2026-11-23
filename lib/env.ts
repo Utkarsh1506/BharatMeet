@@ -27,47 +27,32 @@ export const envSchema = z.object({
   NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: z.string().default("/"),
 
   // UploadThing
-  UPLOADTHING_SECRET: z.string().min(1, "UPLOADTHING_SECRET is required"),
-  UPLOADTHING_APP_ID: z.string().min(1, "UPLOADTHING_APP_ID is required"),
+  UPLOADTHING_SECRET: z.string().trim().min(1).optional().catch(undefined),
+  UPLOADTHING_APP_ID: z.string().trim().min(1).optional().catch(undefined),
 
   // LiveKit
-  LIVEKIT_API_KEY: z.string().min(1, "LIVEKIT_API_KEY is required"),
-  LIVEKIT_API_SECRET: z.string().min(1, "LIVEKIT_API_SECRET is required"),
-  NEXT_PUBLIC_LIVEKIT_URL: z.string().url("NEXT_PUBLIC_LIVEKIT_URL must be a valid URL"),
+  LIVEKIT_API_KEY: z.string().trim().min(1).optional().catch(undefined),
+  LIVEKIT_API_SECRET: z.string().trim().min(1).optional().catch(undefined),
+  NEXT_PUBLIC_LIVEKIT_URL: z.string().trim().url("NEXT_PUBLIC_LIVEKIT_URL must be a valid URL").optional().catch(undefined),
 
   // Optional: Site URL for Socket.IO
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SITE_URL: z.string().trim().url().optional().catch(undefined),
 
   // Optional: Rate Limiting with Upstash Redis
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().trim().url().optional().catch(undefined),
+  UPSTASH_REDIS_REST_TOKEN: z.string().trim().min(1).optional().catch(undefined),
 
   // Node Environment
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 }).superRefine((values, context) => {
-  if (Boolean(values.UPSTASH_REDIS_REST_URL) !== Boolean(values.UPSTASH_REDIS_REST_TOKEN)) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: [values.UPSTASH_REDIS_REST_URL ? "UPSTASH_REDIS_REST_TOKEN" : "UPSTASH_REDIS_REST_URL"],
-      message: "Configure both Upstash Redis credentials or neither",
-    });
-  }
-
   if (values.NODE_ENV === "production") {
-    if (!values.NEXT_PUBLIC_SITE_URL) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["NEXT_PUBLIC_SITE_URL"], message: "Required in production" });
-    } else {
+    if (values.NEXT_PUBLIC_SITE_URL) {
       const siteUrl = parseUrl(values.NEXT_PUBLIC_SITE_URL);
       if (siteUrl && (siteUrl.protocol !== "https:" || siteUrl.pathname !== "/" || siteUrl.search || siteUrl.hash)) {
         context.addIssue({ code: z.ZodIssueCode.custom, path: ["NEXT_PUBLIC_SITE_URL"], message: "Use the canonical HTTPS site origin without a path or query" });
       }
     }
-    if (!values.UPSTASH_REDIS_REST_URL || !values.UPSTASH_REDIS_REST_TOKEN) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["UPSTASH_REDIS_REST_URL"], message: "Distributed rate limiting is required in production" });
-    } else if (parseUrl(values.UPSTASH_REDIS_REST_URL)?.protocol !== "https:") {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["UPSTASH_REDIS_REST_URL"], message: "Production Redis connections must use HTTPS" });
-    }
-    if (parseUrl(values.NEXT_PUBLIC_LIVEKIT_URL)?.protocol !== "wss:") {
+    if (values.NEXT_PUBLIC_LIVEKIT_URL && parseUrl(values.NEXT_PUBLIC_LIVEKIT_URL)?.protocol !== "wss:") {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["NEXT_PUBLIC_LIVEKIT_URL"], message: "Production LiveKit connections must use WSS" });
     }
     if (!values.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_live_")) {
@@ -87,7 +72,8 @@ export type Env = z.infer<typeof envSchema>;
 /**
  * Validate environment variables at startup
  * Development can boot with warnings so the setup screen remains available.
- * Production fails closed: unsafe or incomplete configuration must not start.
+ * Core production configuration (database and Clerk) fails closed. Optional
+ * integrations must not prevent unrelated app features from starting.
  */
 function validateEnv(): Env {
   // Next imports API route modules while collecting build data. Defer strict
@@ -129,14 +115,14 @@ function validateEnv(): Env {
       NEXT_PUBLIC_CLERK_SIGN_UP_URL: "/sign-up",
       NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: "/",
       NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: "/",
-      UPLOADTHING_SECRET: process.env.UPLOADTHING_SECRET || "",
-      UPLOADTHING_APP_ID: process.env.UPLOADTHING_APP_ID || "",
-      LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY || "",
-      LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET || "",
-      NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL || "",
-      NEXT_PUBLIC_SITE_URL: undefined,
-      UPSTASH_REDIS_REST_URL: undefined,
-      UPSTASH_REDIS_REST_TOKEN: undefined,
+      UPLOADTHING_SECRET: process.env.UPLOADTHING_SECRET || undefined,
+      UPLOADTHING_APP_ID: process.env.UPLOADTHING_APP_ID || undefined,
+      LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY || undefined,
+      LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET || undefined,
+      NEXT_PUBLIC_LIVEKIT_URL: process.env.NEXT_PUBLIC_LIVEKIT_URL || undefined,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || undefined,
+      UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || undefined,
+      UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || undefined,
       NODE_ENV: process.env.NODE_ENV || "development",
     };
 
@@ -166,7 +152,9 @@ export const isDevelopment = env.NODE_ENV === "development";
 /**
  * Check if rate limiting is configured
  */
-export const hasRateLimiting = !!(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
+export const hasRateLimiting = Boolean(
+  env.UPSTASH_REDIS_REST_URL?.startsWith("https://") && env.UPSTASH_REDIS_REST_TOKEN,
+);
 
 // Log environment status on startup (only in development)
 if (isDevelopment) {
