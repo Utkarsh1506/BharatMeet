@@ -11,12 +11,40 @@ type ErrorReport = {
   message: string;
   details: string;
   occurredAt: string;
+  occurrences?: number;
 };
 
 type ReportError = (report: Omit<ErrorReport, "id">) => void;
 
 const ERROR_LOG_KEY = "bharatmeet:error-log:v1";
 const MAX_ERROR_LOGS = 50;
+const ERROR_REPEAT_WINDOW_MS = 5 * 60 * 1000;
+
+const compactReports = (reports: ErrorReport[]) => {
+  const compacted: ErrorReport[] = [];
+  const seen = new Map<string, number>();
+
+  for (const report of reports) {
+    if (!report || typeof report.title !== "string" || typeof report.message !== "string") continue;
+    const signature = `${report.title}\u0000${report.message}`;
+    const matchingIndex = seen.get(signature);
+    if (matchingIndex === undefined) {
+      seen.set(signature, compacted.length);
+      compacted.push({ ...report, occurrences: Math.max(1, report.occurrences || 1) });
+      continue;
+    }
+
+    const current = compacted[matchingIndex];
+    compacted[matchingIndex] = {
+      ...current,
+      details: report.occurredAt > current.occurredAt ? report.details : current.details,
+      occurredAt: report.occurredAt > current.occurredAt ? report.occurredAt : current.occurredAt,
+      occurrences: (current.occurrences || 1) + Math.max(1, report.occurrences || 1),
+    };
+  }
+
+  return compacted.sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt)).slice(0, MAX_ERROR_LOGS);
+};
 
 const redactSensitiveValues = (text: string) => text
   .replace(/(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[redacted]")
@@ -76,6 +104,10 @@ class UiErrorBoundary extends Component<
 
 const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; onClose: () => void; onClear: () => void }) => {
   const [copied, setCopied] = useState(false);
+  const [filter, setFilter] = useState<"all" | "workspace">("all");
+  const visibleReports = filter === "all"
+    ? reports
+    : reports.filter((report) => /workspace|\/api\/servers/i.test(`${report.title}\n${report.details}`));
 
   const copyDetails = async () => {
     try {
@@ -92,7 +124,7 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
         <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold">Error log</h2>
-          <p className="text-xs text-muted-foreground">{reports.length} recent {reports.length === 1 ? "error" : "errors"} · saved on this device</p>
+          <p className="text-xs text-muted-foreground">{reports.length} recent {reports.length === 1 ? "issue" : "issues"} · saved on this device</p>
         </div>
         <button type="button" onClick={onClear} disabled={!reports.length} aria-label="Clear error log" className="rounded-md p-2 text-muted-foreground hover:bg-surface-hover hover:text-foreground disabled:opacity-40">
           <Trash2 className="h-4 w-4" />
@@ -101,15 +133,19 @@ const ErrorLogPanel = ({ reports, onClose, onClear }: { reports: ErrorReport[]; 
           <X className="h-4 w-4" />
         </button>
       </div>
+      <div className="flex gap-2 border-b border-border px-3 py-2">
+        <button type="button" onClick={() => setFilter("all")} aria-pressed={filter === "all"} className={`rounded-full px-3 py-1 text-xs font-medium ${filter === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-hover"}`}>All issues</button>
+        <button type="button" onClick={() => setFilter("workspace")} aria-pressed={filter === "workspace"} className={`rounded-full px-3 py-1 text-xs font-medium ${filter === "workspace" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-hover"}`}>Workspace creation</button>
+      </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        {!reports.length && <p className="p-5 text-center text-sm text-muted-foreground">No errors have been captured on this device.</p>}
-        {reports.map((report) => (
+        {!visibleReports.length && <p className="p-5 text-center text-sm text-muted-foreground">{filter === "workspace" ? "No workspace creation errors are in this log yet." : "No errors have been captured on this device."}</p>}
+        {visibleReports.map((report) => (
           <article key={report.id} className="rounded-xl border border-border bg-background/60 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold">{report.title}</h3>
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">{report.message}</p>
-                <time className="mt-2 block text-[11px] text-muted-foreground">{report.occurredAt}</time>
+                <time className="mt-2 block text-[11px] text-muted-foreground">{report.occurredAt}{(report.occurrences || 1) > 1 ? ` · repeated ${report.occurrences} times` : ""}</time>
               </div>
               <button type="button" onClick={() => navigator.clipboard.writeText(getReportText(report)).then(() => setCopied(true)).catch(() => setCopied(false))} aria-label="Copy this error" className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-surface-hover hover:text-foreground">
                 <Copy className="h-4 w-4" />
@@ -146,10 +182,22 @@ export const ErrorReportingProvider = ({ children }: { children: React.ReactNode
     };
     setReports((current) => {
       const mostRecent = current[0];
-      if (mostRecent && mostRecent.title === safeReport.title && mostRecent.message === safeReport.message && Date.now() - Date.parse(mostRecent.occurredAt) < 1500) {
-        return current;
+      const duplicateIndex = current.findIndex((report) =>
+        report.title === safeReport.title
+        && report.message === safeReport.message
+        && Date.now() - Date.parse(report.occurredAt) < ERROR_REPEAT_WINDOW_MS,
+      );
+      if (duplicateIndex >= 0) {
+        const duplicate = current[duplicateIndex];
+        const updated = {
+          ...duplicate,
+          details: safeReport.details || duplicate.details,
+          occurredAt: safeReport.occurredAt,
+          occurrences: (duplicate.occurrences || 1) + 1,
+        };
+        return [updated, ...current.filter((_, index) => index !== duplicateIndex)].slice(0, MAX_ERROR_LOGS);
       }
-      return [safeReport, ...current].slice(0, MAX_ERROR_LOGS);
+      return [{ ...safeReport, occurrences: 1 }, ...current].slice(0, MAX_ERROR_LOGS);
     });
     setIsLogOpen(true);
   }, []);
@@ -159,7 +207,7 @@ export const ErrorReportingProvider = ({ children }: { children: React.ReactNode
       const saved = localStorage.getItem(ERROR_LOG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as ErrorReport[];
-        if (Array.isArray(parsed)) setReports((current) => [...current, ...parsed].slice(0, MAX_ERROR_LOGS));
+        if (Array.isArray(parsed)) setReports((current) => compactReports([...current, ...parsed]));
       }
     } catch {
       localStorage.removeItem(ERROR_LOG_KEY);
