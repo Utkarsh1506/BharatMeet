@@ -69,6 +69,10 @@ export const SocketProvider = ({
   }, []);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_SOCKET_IO_ENABLED === "false") {
+      return;
+    }
+
     // Only run when auth is loaded
     if (!isLoaded) {
       return;

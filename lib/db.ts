@@ -1,6 +1,24 @@
 import { PrismaClient } from "@prisma/client";
 import { isDevelopment, isProduction } from "./env";
 
+const getDatabaseUrl = () => {
+  const connectionString = process.env.DATABASE_URL?.trim();
+  if (!connectionString) return "";
+
+  try {
+    const url = new URL(connectionString);
+    const serverless = process.env.VERCEL === "1" || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+    url.searchParams.set("connection_limit", serverless ? "1" : isProduction ? "10" : "5");
+    url.searchParams.set("pool_timeout", "10");
+    url.searchParams.set("connect_timeout", "10");
+    return url.toString();
+  } catch {
+    // Leave malformed connection strings intact so Prisma reports the original
+    // configuration error instead of obscuring it during module initialization.
+    return connectionString;
+  }
+};
+
 declare global {
   var prisma: PrismaClient | undefined;
 }
@@ -9,20 +27,17 @@ declare global {
  * Prisma Client with optimized connection pooling
  *
  * Connection pool configuration:
- * - Production: 10 connections (adjust based on your database limits)
+ * - Vercel/serverless: one connection per function instance
+ * - Long-running production server: 10 connections
  * - Development: 5 connections (lower to avoid exhausting local DB)
  *
- * Connection timeout: 20 seconds
- * Pool timeout: 20 seconds
+ * Connection and pool timeouts: 10 seconds
  */
 export const db = globalThis.prisma || new PrismaClient({
   log: isDevelopment ? ["query", "error", "warn"] : ["error"],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL + (isProduction
-        ? "?connection_limit=10&pool_timeout=20&connect_timeout=20"
-        : "?connection_limit=5&pool_timeout=20&connect_timeout=20"
-      ),
+      url: getDatabaseUrl(),
     },
   },
 });

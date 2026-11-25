@@ -3,6 +3,11 @@ const nextConfig = {
   // Keep development output separate so a local production build cannot leave
   // the dev server serving stale route manifests from the shared .next folder.
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  // Socket.IO needs a persistent server and cannot be hosted by Vercel's
+  // serverless functions. Chat automatically falls back to REST polling there.
+  env: {
+    NEXT_PUBLIC_SOCKET_IO_ENABLED: process.env.VERCEL === "1" ? "false" : "true",
+  },
   output: "standalone",
   webpack: (config) => {
     config.externals.push({
