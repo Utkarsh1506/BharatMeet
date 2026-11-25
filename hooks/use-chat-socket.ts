@@ -70,6 +70,11 @@ export const useChatSocket = ({
       }
 
       queryClient.setQueryData([queryKey], (oldData: any) => {
+        const alreadyPresent = oldData?.pages?.some((page: any) =>
+          page.items?.some((item: MessageWithMemberWithProfile) => item.id === message.id),
+        );
+        if (alreadyPresent) return oldData;
+
         if (!oldData || !oldData.pages || oldData.pages.length === 0) {
           return {
             pages: [{

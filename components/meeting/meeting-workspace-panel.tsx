@@ -182,7 +182,7 @@ export const MeetingWorkspacePanel = ({
       ...(workspace.actions.slice(0, 20).map((action) => `• ${action.completed ? "Done: " : ""}${action.title}${action.assignee ? ` — ${action.assignee.name}` : " — Unassigned"}${action.dueAt ? ` · due ${new Date(action.dueAt).toLocaleDateString()}` : ""}`)),
     ].join("\n").slice(0, 3900);
     try {
-      await axios.post(`/api/socket/messages?channelId=${encodeURIComponent(channelId)}&serverId=${encodeURIComponent(serverId)}`, { content: recap });
+      await axios.post(`/api/messages?channelId=${encodeURIComponent(channelId)}&serverId=${encodeURIComponent(serverId)}`, { content: recap });
       setTab("chat");
     } catch {
       setError("The recap could not be posted. Please try again.");
@@ -236,7 +236,7 @@ export const MeetingWorkspacePanel = ({
           <button type="button" className={`meeting-caption-toggle ${listening ? "is-listening" : ""}`} onClick={listening ? stopCaptions : startCaptions}>{listening ? <><MicOff className="h-4 w-4" /> Stop captions</> : <><Mic className="h-4 w-4" /> Start live captions</>}</button>
           <div className="meeting-caption-list" aria-live="polite">{captions.slice(-8).map((caption) => <div key={caption.id} className={caption.final ? "" : "is-interim"}><small>{caption.name}</small><p>{caption.text}</p></div>)}{!captions.length && <p className="meeting-empty-note">Captions will appear here as people speak.</p>}</div>
         </>}
-        {!loading && tab === "chat" && <div className="meeting-inroom-chat"><ChatMessages member={member} name={channelName} chatId={channelId} type="channel" apiUrl="/api/messages" socketUrl="/api/socket/messages" socketQuery={{ channelId, serverId }} paramKey="channelId" paramValue={channelId} /><ChatInput name={channelName} type="channel" apiUrl="/api/socket/messages" query={{ channelId, serverId }} /></div>}
+        {!loading && tab === "chat" && <div className="meeting-inroom-chat"><ChatMessages member={member} name={channelName} chatId={channelId} type="channel" apiUrl="/api/messages" socketUrl="/api/socket/messages" socketQuery={{ channelId, serverId }} paramKey="channelId" paramValue={channelId} /><ChatInput name={channelName} type="channel" apiUrl="/api/messages" query={{ channelId, serverId }} /></div>}
       </div>
     </aside>
   );

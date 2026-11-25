@@ -9,6 +9,7 @@ import { Loader2, Mic, Plus, SendHorizontal, Square, Trash2, X } from "lucide-re
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   Form,
@@ -40,7 +41,11 @@ const getRequestErrorMessage = (error: unknown) => {
   if (!axios.isAxiosError(error)) return fallback;
 
   const responseData = error.response?.data;
-  if (typeof responseData === "string") return responseData;
+  if (typeof responseData === "string") {
+    return responseData.trimStart().startsWith("<")
+      ? "The message service returned a deployment error. Refresh the page and try again."
+      : responseData;
+  }
   if (responseData && typeof responseData === "object") {
     const payload = responseData as { error?: string | { message?: string }; message?: string };
     if (typeof payload.error === "string") return payload.error;
@@ -63,6 +68,7 @@ export const ChatInput = ({
   const { onOpen } = useModal();
   const { isReplying, replyData, onCancel } = useReplyStore();
   const { socket } = useSocket();
+  const queryClient = useQueryClient();
   const { userId } = useAuth();
   const router = useRouter();
   const typingTimeout = useRef<number | null>(null);
@@ -84,6 +90,13 @@ export const ChatInput = ({
 
   const chatId = query.channelId || query.conversationId;
   const draftKey = `bharatmeet:draft:${userId || "anonymous"}:${type}:${chatId}`;
+
+  const refreshMessages = () => {
+    router.refresh();
+    if (chatId) {
+      void queryClient.invalidateQueries({ queryKey: [`chat:${chatId}`], exact: true });
+    }
+  };
 
   const stopTyping = () => {
     if (typingTimeout.current) {
@@ -203,7 +216,7 @@ export const ChatInput = ({
       voiceChunksRef.current = [];
       setVoiceSeconds(0);
       setVoiceState("idle");
-      router.refresh();
+      refreshMessages();
     } catch (error) {
       setVoiceError(axios.isAxiosError(error) ? getRequestErrorMessage(error) : error instanceof Error ? error.message : "The voice note could not be sent.");
       setVoiceState("ready");
@@ -245,7 +258,7 @@ export const ChatInput = ({
       if (isReplying) {
         onCancel();
       }
-      router.refresh();
+      refreshMessages();
     } catch (error) {
       form.setError("root", {
         message: getRequestErrorMessage(error),
