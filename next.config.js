@@ -6,7 +6,9 @@ const nextConfig = {
   // Socket.IO needs a persistent server and cannot be hosted by Vercel's
   // serverless functions. Chat automatically falls back to REST polling there.
   env: {
-    NEXT_PUBLIC_SOCKET_IO_ENABLED: process.env.VERCEL === "1" ? "false" : "true",
+    NEXT_PUBLIC_SOCKET_IO_ENABLED: process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV)
+      ? "false"
+      : "true",
   },
   output: "standalone",
   webpack: (config) => {
