@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtmlLib from "sanitize-html";
 
 /**
  * Sanitize HTML content to prevent XSS attacks
@@ -9,12 +9,12 @@ export function sanitizeHtml(dirty: string): string {
     return "";
   }
 
-  // Configure DOMPurify to allow basic formatting but remove scripts
-  const clean = DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "p", "br", "ul", "ol", "li", "code", "pre"],
-    ALLOWED_ATTR: ["href", "target", "rel"],
-    ALLOW_DATA_ATTR: false,
-    ALLOW_UNKNOWN_PROTOCOLS: false,
+  // Allow basic formatting and links while removing scripts and unsafe attributes.
+  const clean = sanitizeHtmlLib(dirty, {
+    allowedTags: ["b", "i", "em", "strong", "a", "p", "br", "ul", "ol", "li", "code", "pre"],
+    allowedAttributes: { a: ["href", "target", "rel"] },
+    allowedSchemes: ["http", "https", "mailto"],
+    allowProtocolRelative: false,
   });
 
   return clean;
