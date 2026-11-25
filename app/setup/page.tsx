@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { initialProfile } from "@/lib/initial-profile";
 import { InitialModal } from "@/components/modals/initial-modal";
 
+// Kept as a standalone route so browser and PWA onboarding share one entry.
 const SetupPage = async () => {
   const profile = await initialProfile();
 

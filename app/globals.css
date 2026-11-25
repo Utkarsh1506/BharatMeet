@@ -852,3 +852,18 @@ body,
   .meeting-tools-tabs button { min-width: 2.9rem; flex-direction: column; gap: 0.2rem; padding: 0.35rem 0.4rem; font-size: 0.58rem; }
   .meeting-video-stage { padding: 0.55rem; }
 }
+
+@media (max-width: 639px) {
+  .error-log-trigger {
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    display: grid;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    place-items: center;
+  }
+
+  .error-log-trigger-label { display: none; }
+  .error-log-trigger-count { position: absolute; top: -0.2rem; right: -0.2rem; }
+}

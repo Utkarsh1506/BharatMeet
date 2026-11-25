@@ -454,9 +454,9 @@ export const ErrorReportingProvider = ({ children }: { children: React.ReactNode
       <UiErrorBoundary reportError={reportError}>{children}</UiErrorBoundary>
       {isLogOpen && <ErrorLogPanel reports={reports} onClose={() => setIsLogOpen(false)} onClear={clearReports} />}
       {!isLogOpen && (
-        <button type="button" onClick={() => setIsLogOpen(true)} aria-expanded={false} aria-controls="bharatmeet-error-log" className="pointer-events-auto fixed bottom-4 right-4 z-[10001] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xl shadow-black/30 transition hover:border-rose-400/50 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Bug className="h-4 w-4 text-rose-400" /> Error log
-          {reports.length > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{reports.length}</span>}
+        <button type="button" onClick={() => setIsLogOpen(true)} aria-label="Open error log" aria-expanded={false} aria-controls="bharatmeet-error-log" className="error-log-trigger pointer-events-auto fixed bottom-4 right-4 z-[10001] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xl shadow-black/30 transition hover:border-rose-400/50 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Bug className="h-4 w-4 text-rose-400" /> <span className="error-log-trigger-label">Error log</span>
+          {reports.length > 0 && <span className="error-log-trigger-count grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{reports.length}</span>}
         </button>
       )}
     </>

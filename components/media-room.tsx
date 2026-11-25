@@ -48,7 +48,7 @@ const MeetingTopbar = () => {
         <span className="meeting-participant-count"><Users className="h-3.5 w-3.5" />{participants.length}</span>
         <span className={`meeting-connection-pill ${connected ? "is-connected" : reconnecting ? "is-reconnecting" : ""}`}>
           <span className="meeting-status-dot" />
-          <span className="hidden sm:inline">{connected ? "Connected" : reconnecting ? "Reconnecting" : "Connecting"}</span>
+          <span className="hidden sm:!inline">{connected ? "Connected" : reconnecting ? "Reconnecting" : "Connecting"}</span>
         </span>
       </div>
     </div>

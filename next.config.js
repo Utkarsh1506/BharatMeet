@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep development output separate so a local production build cannot leave
+  // the dev server serving stale route manifests from the shared .next folder.
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   output: "standalone",
   webpack: (config) => {
     config.externals.push({
