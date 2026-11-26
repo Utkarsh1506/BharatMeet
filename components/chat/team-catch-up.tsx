@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { AlertCircle, ArrowUpRight, Check, Circle, Clock3, ListTodo, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Check, Circle, Clock3, Heart, ListTodo, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
@@ -35,6 +35,7 @@ type CatchUpData = {
   }>;
 };
 type TeamMember = { profile: { id: string; name: string } };
+type Appreciation = { id: string; message: string; createdAt: string; channel: { id: string; name: string }; sender: { id: string; name: string }; recipient: { id: string; name: string } };
 
 function pulseValue(content: string, label: string) {
   return content.split("\n").find((line) => line.startsWith(`${label}:`))?.slice(label.length + 1).trim() || "";
@@ -55,6 +56,12 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
   const [dueAt, setDueAt] = useState("");
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+  const [appreciations, setAppreciations] = useState<Appreciation[]>([]);
+  const [showAppreciationForm, setShowAppreciationForm] = useState(false);
+  const [recipientProfileId, setRecipientProfileId] = useState("");
+  const [appreciationMessage, setAppreciationMessage] = useState("");
+  const [appreciationBusy, setAppreciationBusy] = useState(false);
+  const [appreciationError, setAppreciationError] = useState("");
 
   const loadCatchUp = useCallback(async () => {
     setLoading(true);
@@ -64,6 +71,14 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message || result?.error || "Could not load team catch-up.");
       setData(result as CatchUpData);
+      const appreciationResponse = await fetch(`/api/appreciations?serverId=${encodeURIComponent(serverId)}`, { cache: "no-store" });
+      if (appreciationResponse.ok) {
+        const appreciationResult = await appreciationResponse.json();
+        setAppreciations(appreciationResult.appreciations as Appreciation[]);
+        setAppreciationError("");
+      } else {
+        setAppreciationError("Appreciation moments could not be loaded right now.");
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load team catch-up.");
     } finally {
@@ -82,6 +97,29 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
   }, []);
 
   const memberOptions = useMemo(() => members.map(({ profile }) => profile), [members]);
+
+  const sendAppreciation = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!recipientProfileId || appreciationMessage.trim().length < 3) return;
+    setAppreciationBusy(true);
+    setAppreciationError("");
+    try {
+      const response = await fetch("/api/appreciations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId, channelId, recipientProfileId, message: appreciationMessage.trim() }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error?.message || result?.error || "Could not send your appreciation.");
+      setAppreciationMessage("");
+      setShowAppreciationForm(false);
+      await loadCatchUp();
+    } catch (caught) {
+      setAppreciationError(caught instanceof Error ? caught.message : "Could not send your appreciation.");
+    } finally {
+      setAppreciationBusy(false);
+    }
+  };
 
   const startAction = (pulse: CatchUpData["pulses"][number]) => {
     setSourcePulse(pulse);
@@ -214,6 +252,20 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
               {pulse.actionItems.length > 0 && <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><Clock3 className="h-3 w-3" />{pulse.actionItems.length} linked follow-up{pulse.actionItems.length === 1 ? "" : "s"}</p>}
             </article>;
           }) : !loading && <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center"><AlertCircle className="mx-auto h-5 w-5 text-muted-foreground" /><p className="mt-2 text-sm font-medium">No recent pulses yet</p><p className="mt-1 text-xs text-muted-foreground">Share a Done · Next · Blocked update to start the team loop.</p></div>}
+        </section>
+
+        <section className="space-y-3 border-t border-border/70 pt-4">
+          <div className="flex items-center justify-between gap-3"><div><h3 className="flex items-center gap-1.5 text-sm font-semibold"><Heart className="h-4 w-4 text-rose-400" /> Small wins, shared</h3><p className="mt-1 text-[11px] text-muted-foreground">A thoughtful thank-you, without scores or streaks.</p></div><Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => { setShowAppreciationForm((current) => !current); setAppreciationError(""); if (!recipientProfileId) setRecipientProfileId(memberOptions.find((member) => member.id !== data?.currentProfileId)?.id || ""); }}><Heart className="mr-1.5 h-3.5 w-3.5" /> Thank someone</Button></div>
+          {showAppreciationForm && <form onSubmit={sendAppreciation} className="space-y-2.5 rounded-xl border border-rose-400/20 bg-rose-400/[0.04] p-3">
+            <Select value={recipientProfileId} onValueChange={setRecipientProfileId}>
+              <SelectTrigger aria-label="Choose teammate to appreciate"><SelectValue placeholder="Choose a teammate" /></SelectTrigger>
+              <SelectContent>{memberOptions.filter((member) => member.id !== data?.currentProfileId).map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <textarea value={appreciationMessage} onChange={(event) => setAppreciationMessage(event.target.value)} maxLength={300} minLength={3} rows={2} required placeholder="What did they do that helped? Be specific…" className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary" />
+            <div className="flex items-center justify-between gap-3"><span className="text-[10px] text-muted-foreground">Up to 5 notes a day · only for workspace teammates</span><Button type="submit" size="sm" disabled={appreciationBusy || !recipientProfileId || appreciationMessage.trim().length < 3}>{appreciationBusy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />} Send thanks</Button></div>
+          </form>}
+          {appreciationError && <p role="alert" className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive">{appreciationError}</p>}
+          {appreciations.length ? <div className="space-y-2">{appreciations.slice(0, 5).map((moment) => <article key={moment.id} className="rounded-xl border border-border/70 bg-background/40 p-3"><p className="text-sm leading-5">“{moment.message}”</p><p className="mt-2 text-[10px] text-muted-foreground"><span className="font-medium text-foreground">{moment.sender.name}</span> thanked <span className="font-medium text-foreground">{moment.recipient.name}</span> · #{moment.channel.name} · {readableDate(moment.createdAt)}</p></article>)}</div> : !loading && <p className="rounded-xl border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">No thank-you notes yet. A specific, sincere note can make someone&apos;s day.</p>}
         </section>
       </DialogContent>
     </Dialog>

@@ -24,6 +24,8 @@ model Profile {
   actionItemsCreated     ActionItem[]       @relation("ActionItemCreator")
   actionItemsAssigned    ActionItem[]       @relation("ActionItemAssignee")
   teamPulses             TeamPulse[]
+  appreciationsSent      Appreciation[]     @relation("AppreciationSender")
+  appreciationsReceived  Appreciation[]     @relation("AppreciationRecipient")
   servers                Server[]
   members                Member[]
   channels               Channel[]
@@ -33,18 +35,19 @@ model Profile {
 }
 
 model Server {
-  id          String       @id @default(uuid())
-  name        String
-  imageUrl    String       @db.Text
-  inviteCode  String       @unique
-  profileId   String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  members     Member[]
-  channels    Channel[]
-  actionItems ActionItem[]
-  teamPulses  TeamPulse[]
+  id            String         @id @default(uuid())
+  name          String
+  imageUrl      String         @db.Text
+  inviteCode    String         @unique
+  profileId     String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  members       Member[]
+  channels      Channel[]
+  actionItems   ActionItem[]
+  teamPulses    TeamPulse[]
+  appreciations Appreciation[]
 
   @@index([profileId])
 }
@@ -85,6 +88,7 @@ model Channel {
   meetingWorkspace MeetingWorkspace?
   actionItems      ActionItem[]
   teamPulses       TeamPulse[]
+  appreciations    Appreciation[]
 
   @@index([profileId])
   @@index([serverId])
@@ -133,6 +137,24 @@ model TeamPulse {
   @@unique([serverId, profileId, pulseDate])
   @@index([serverId, pulseDate(sort: Desc)])
   @@index([channelId, pulseDate(sort: Desc)])
+}
+
+model Appreciation {
+  id                 String   @id @default(uuid())
+  serverId           String
+  channelId          String
+  senderProfileId    String
+  recipientProfileId String
+  message            String   @db.VarChar(300)
+  createdAt          DateTime @default(now())
+  server             Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel            Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender             Profile  @relation("AppreciationSender", fields: [senderProfileId], references: [id], onDelete: Cascade)
+  recipient          Profile  @relation("AppreciationRecipient", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, createdAt(sort: Desc)])
+  @@index([recipientProfileId, createdAt(sort: Desc)])
+  @@index([senderProfileId, createdAt(sort: Desc)])
 }
 
 model MessageReaction {
