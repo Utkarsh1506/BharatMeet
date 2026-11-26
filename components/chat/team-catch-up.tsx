@@ -15,6 +15,7 @@ type CatchUpData = {
   currentProfileId: string;
   pulses: Array<{
     id: string;
+    pulseId: string | null;
     content: string;
     createdAt: string;
     channel: { id: string; name: string };
@@ -29,6 +30,7 @@ type CatchUpData = {
     createdAt: string;
     channel: { id: string; name: string };
     sourceMessageId: string | null;
+    sourcePulseId: string | null;
     assignee: { id: string; name: string } | null;
   }>;
 };
@@ -101,7 +103,8 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
         body: JSON.stringify({
           serverId,
           channelId: sourcePulse?.channel.id || channelId,
-          sourceMessageId: sourcePulse?.id || null,
+          sourceMessageId: sourcePulse?.pulseId ? null : sourcePulse?.id || null,
+          sourcePulseId: sourcePulse?.pulseId || null,
           title: title.trim(),
           assigneeProfileId: assigneeProfileId === "me" ? data?.currentProfileId : assigneeProfileId,
           dueAt: dueAt ? new Date(dueAt).toISOString() : null,
@@ -190,7 +193,7 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
                       <SelectContent><SelectItem value="OPEN">Open</SelectItem><SelectItem value="IN_PROGRESS">In progress</SelectItem><SelectItem value="BLOCKED">Blocked</SelectItem><SelectItem value="DONE">Done</SelectItem></SelectContent>
                     </Select>
                   </div>
-                  {action.sourceMessageId && <Link href={`/servers/${serverId}/channels/${action.channel.id}`} onClick={() => setOpen(false)} className="mt-2 inline-flex items-center gap-1 pl-4 text-[11px] font-medium text-primary hover:underline">View source room <ArrowUpRight className="h-3 w-3" /></Link>}
+                  {(action.sourceMessageId || action.sourcePulseId) && <Link href={`/servers/${serverId}/channels/${action.channel.id}`} onClick={() => setOpen(false)} className="mt-2 inline-flex items-center gap-1 pl-4 text-[11px] font-medium text-primary hover:underline">View source room <ArrowUpRight className="h-3 w-3" /></Link>}
                 </article>
               ))}
             </div>

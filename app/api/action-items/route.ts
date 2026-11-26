@@ -31,7 +31,24 @@ export async function GET(request: Request) {
     if (!membership) return ApiErrors.notFound("Workspace not found.");
 
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const [pulses, actionItems] = await Promise.all([
+    const [structuredPulses, legacyPulses, actionItems] = await Promise.all([
+      db.teamPulse.findMany({
+        where: { serverId: serverId.data, pulseDate: { gte: since } },
+        orderBy: [{ pulseDate: "desc" }, { updatedAt: "desc" }],
+        take: 30,
+        select: {
+          id: true,
+          done: true,
+          next: true,
+          blocked: true,
+          pulseDate: true,
+          createdAt: true,
+          updatedAt: true,
+          channel: { select: { id: true, name: true } },
+          profile: { select: { id: true, name: true, imageUrl: true } },
+          actionItems: { select: { id: true, title: true, status: true } },
+        },
+      }),
       db.message.findMany({
         where: {
           channel: { serverId: serverId.data, type: "TEXT" },
@@ -62,10 +79,29 @@ export async function GET(request: Request) {
           createdAt: true,
           channel: { select: { id: true, name: true } },
           sourceMessageId: true,
+          sourcePulseId: true,
           assignee: { select: { id: true, name: true } },
         },
       }),
     ]);
+
+    const pulses = [
+      ...structuredPulses.map((pulse) => ({
+        id: pulse.id,
+        pulseId: pulse.id,
+        content: [
+          `TEAM PULSE · ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(pulse.pulseDate)}`,
+          `✅ Done: ${pulse.done || "—"}`,
+          `🎯 Next: ${pulse.next || "—"}`,
+          `🧱 Blocked: ${pulse.blocked || "None"}`,
+        ].join("\n"),
+        createdAt: pulse.updatedAt,
+        channel: pulse.channel,
+        member: { profile: pulse.profile },
+        actionItems: pulse.actionItems,
+      })),
+      ...legacyPulses.map((pulse) => ({ ...pulse, pulseId: null })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 30);
 
     return NextResponse.json({ pulses, actionItems, currentProfileId: profile.id }, { headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
@@ -78,6 +114,7 @@ const createActionSchema = z.object({
   serverId: uuid,
   channelId: uuid,
   sourceMessageId: uuid.nullable().optional(),
+  sourcePulseId: uuid.nullable().optional(),
   title: z.string().trim().min(1).max(240),
   assigneeProfileId: uuid.nullable().optional(),
   dueAt: z.string().datetime({ offset: true }).nullable().optional(),
@@ -116,6 +153,14 @@ export async function POST(request: Request) {
       if (!sourceMessage) return ApiErrors.badRequest("The source update must belong to this room.");
     }
 
+    if (input.sourcePulseId) {
+      const sourcePulse = await db.teamPulse.findFirst({
+        where: { id: input.sourcePulseId, serverId: channel.serverId, channelId: channel.id },
+        select: { id: true },
+      });
+      if (!sourcePulse) return ApiErrors.badRequest("The source pulse must belong to this room.");
+    }
+
     const destinationProfileId = input.assigneeProfileId || profile.id;
     const roomLink = `/servers/${channel.serverId}/channels/${channel.id}`;
     const created = await db.$transaction(async (tx) => {
@@ -136,6 +181,7 @@ export async function POST(request: Request) {
           serverId: channel.serverId,
           channelId: channel.id,
           sourceMessageId: input.sourceMessageId || null,
+          sourcePulseId: input.sourcePulseId || null,
           createdByProfileId: profile.id,
           assigneeProfileId: destinationProfileId,
           reminderId: reminder?.id,

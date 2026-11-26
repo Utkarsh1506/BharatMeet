@@ -4,8 +4,7 @@ import { ArrowUpRight, CalendarClock, HelpCircle, Headphones, Plus, Sparkles, Us
 import { MemberRole, Server } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { useModal } from "@/hooks/use-modal-store";
@@ -41,23 +40,43 @@ export const RoomCompanion = ({
 }) => {
   const { onOpen } = useModal();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [pulseOpen, setPulseOpen] = useState(false);
   const [pulseDone, setPulseDone] = useState("");
   const [pulseNext, setPulseNext] = useState("");
   const [pulseBlocked, setPulseBlocked] = useState("");
   const [pulseBusy, setPulseBusy] = useState(false);
+  const [pulseLoading, setPulseLoading] = useState(false);
+  const [pulseExists, setPulseExists] = useState(false);
   const [pulseError, setPulseError] = useState("");
   const online = members.filter((member) => member.profile.presenceStatus === "online");
 
+  const openPulseForm = useCallback(async () => {
+    setPulseError("");
+    setPulseOpen(true);
+    setPulseLoading(true);
+    setPulseExists(false);
+    setPulseDone("");
+    setPulseNext("");
+    setPulseBlocked("");
+    const now = new Date();
+    const localPulseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    try {
+      const { data } = await axios.get("/api/team-pulses", { params: { serverId: server.id, channelId, pulseDate: localPulseDate } });
+      setPulseExists(Boolean(data.pulse));
+      setPulseDone(data.pulse?.done || "");
+      setPulseNext(data.pulse?.next || "");
+      setPulseBlocked(data.pulse?.blocked || "");
+    } catch {
+      setPulseError("Could not load today’s update. You can still try sharing it again.");
+    } finally {
+      setPulseLoading(false);
+    }
+  }, [channelId, server.id]);
+
   useEffect(() => {
-    const openPulse = () => {
-      setPulseError("");
-      setPulseOpen(true);
-    };
-    window.addEventListener(OPEN_TEAM_PULSE_EVENT, openPulse);
-    return () => window.removeEventListener(OPEN_TEAM_PULSE_EVENT, openPulse);
-  }, []);
+    window.addEventListener(OPEN_TEAM_PULSE_EVENT, openPulseForm);
+    return () => window.removeEventListener(OPEN_TEAM_PULSE_EVENT, openPulseForm);
+  }, [openPulseForm]);
 
   const submitPulse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,24 +87,19 @@ export const RoomCompanion = ({
 
     setPulseBusy(true);
     setPulseError("");
-    const dateLabel = new Intl.DateTimeFormat(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(new Date());
-    const content = [
-      `TEAM PULSE · ${dateLabel}`,
-      `✅ Done: ${pulseDone.trim() || "—"}`,
-      `🎯 Next: ${pulseNext.trim() || "—"}`,
-      `🧱 Blocked: ${pulseBlocked.trim() || "None"}`,
-    ].join("\n");
+    const now = new Date();
+    const localPulseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     try {
-      await axios.post(
-        `/api/messages?channelId=${encodeURIComponent(channelId)}&serverId=${encodeURIComponent(server.id)}`,
-        { content },
-      );
-      await queryClient.invalidateQueries({ queryKey: [`chat:${channelId}`], exact: true });
+      await axios.post("/api/team-pulses", {
+        serverId: server.id,
+        channelId,
+        pulseDate: localPulseDate,
+        done: pulseDone.trim(),
+        next: pulseNext.trim(),
+        blocked: pulseBlocked.trim(),
+      });
+      setPulseExists(true);
       setPulseDone("");
       setPulseNext("");
       setPulseBlocked("");
@@ -163,7 +177,7 @@ export const RoomCompanion = ({
         <div className="section-kicker">Make it a moment</div>
         <button
           type="button"
-          onClick={() => { setPulseError(""); setPulseOpen(true); }}
+          onClick={() => void openPulseForm()}
           className="mt-3 flex w-full items-center gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-2 text-left transition hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
@@ -209,27 +223,27 @@ export const RoomCompanion = ({
       }}>
         <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.25rem)] max-w-lg overflow-y-auto rounded-2xl border-border bg-card text-card-foreground sm:w-full">
           <DialogHeader className="pr-8 text-left">
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Share your team pulse</DialogTitle>
-            <DialogDescription>Keep everyone in sync without scheduling another call. Share only what is useful today.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Your daily team pulse</DialogTitle>
+            <DialogDescription>One thoughtful update per workspace each day. You can edit it later today.</DialogDescription>
           </DialogHeader>
           <form onSubmit={submitPulse} className="space-y-4">
             <label className="block space-y-1.5 text-sm font-medium">
               <span>What did you finish?</span>
-              <textarea value={pulseDone} onChange={(event) => setPulseDone(event.target.value)} maxLength={900} rows={3} placeholder="A win, decision, or piece of progress…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+              <textarea disabled={pulseLoading} value={pulseDone} onChange={(event) => setPulseDone(event.target.value)} maxLength={900} rows={3} placeholder="A win, decision, or piece of progress…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60" />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
               <span>What are you focusing on next?</span>
-              <textarea value={pulseNext} onChange={(event) => setPulseNext(event.target.value)} maxLength={900} rows={3} placeholder="The next thing you want to move forward…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+              <textarea disabled={pulseLoading} value={pulseNext} onChange={(event) => setPulseNext(event.target.value)} maxLength={900} rows={3} placeholder="The next thing you want to move forward…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60" />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
               <span>Anything blocking you?</span>
-              <textarea value={pulseBlocked} onChange={(event) => setPulseBlocked(event.target.value)} maxLength={900} rows={2} placeholder="Leave blank if nothing is blocked…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+              <textarea disabled={pulseLoading} value={pulseBlocked} onChange={(event) => setPulseBlocked(event.target.value)} maxLength={900} rows={2} placeholder="Leave blank if nothing is blocked…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60" />
             </label>
             {pulseError && <p role="alert" className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{pulseError}</p>}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" disabled={pulseBusy} onClick={() => setPulseOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={pulseBusy || (!pulseDone.trim() && !pulseNext.trim() && !pulseBlocked.trim())}>
-                {pulseBusy ? "Sharing…" : "Share update"}
+              <Button type="submit" disabled={pulseBusy || pulseLoading || (!pulseDone.trim() && !pulseNext.trim() && !pulseBlocked.trim())}>
+                {pulseBusy ? "Saving…" : pulseExists ? "Update today’s pulse" : "Share update"}
               </Button>
             </div>
           </form>

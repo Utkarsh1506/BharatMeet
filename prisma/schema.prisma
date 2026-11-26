@@ -11,38 +11,40 @@ datasource db {
 }
 
 model Profile {
-  id                     String            @id @default(uuid())
-  userId                 String            @unique
+  id                     String             @id @default(uuid())
+  userId                 String             @unique
   name                   String
-  imageUrl               String            @db.Text
-  email                  String            @db.Text
-  presenceStatus         String            @default("online")
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  meetingDecisions       MeetingDecision[] @relation("DecisionAuthor")
-  meetingActionsAssigned MeetingAction[]   @relation("ActionAssignee")
-  actionItemsCreated    ActionItem[]       @relation("ActionItemCreator")
-  actionItemsAssigned   ActionItem[]       @relation("ActionItemAssignee")
+  imageUrl               String             @db.Text
+  email                  String             @db.Text
+  presenceStatus         String             @default("online")
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  meetingDecisions       MeetingDecision[]  @relation("DecisionAuthor")
+  meetingActionsAssigned MeetingAction[]    @relation("ActionAssignee")
+  actionItemsCreated     ActionItem[]       @relation("ActionItemCreator")
+  actionItemsAssigned    ActionItem[]       @relation("ActionItemAssignee")
+  teamPulses             TeamPulse[]
   servers                Server[]
   members                Member[]
   channels               Channel[]
   notifications          Notification[]
   reminders              Reminder[]
-  pushSubscriptions       PushSubscription[]
+  pushSubscriptions      PushSubscription[]
 }
 
 model Server {
-  id         String    @id @default(uuid())
-  name       String
-  imageUrl   String    @db.Text
-  inviteCode String    @unique
-  profileId  String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  profile    Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  members    Member[]
-  channels   Channel[]
+  id          String       @id @default(uuid())
+  name        String
+  imageUrl    String       @db.Text
+  inviteCode  String       @unique
+  profileId   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  members     Member[]
+  channels    Channel[]
   actionItems ActionItem[]
+  teamPulses  TeamPulse[]
 
   @@index([profileId])
 }
@@ -82,26 +84,27 @@ model Channel {
   messages         Message[]
   meetingWorkspace MeetingWorkspace?
   actionItems      ActionItem[]
+  teamPulses       TeamPulse[]
 
   @@index([profileId])
   @@index([serverId])
 }
 
 model Message {
-  id        String            @id @default(uuid())
-  content   String            @db.Text
-  fileUrl   String?           @db.Text
-  memberId  String
-  channelId String
-  deleted   Boolean           @default(false)
-  replyToId String?
-  replyTo   Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   Message[]         @relation("MessageReplies")
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  member    Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  channel   Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  reactions MessageReaction[]
+  id          String            @id @default(uuid())
+  content     String            @db.Text
+  fileUrl     String?           @db.Text
+  memberId    String
+  channelId   String
+  deleted     Boolean           @default(false)
+  replyToId   String?
+  replyTo     Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies     Message[]         @relation("MessageReplies")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  member      Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel     Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  reactions   MessageReaction[]
   actionItems ActionItem[]
 
   @@index([channelId])
@@ -109,6 +112,27 @@ model Message {
   @@index([replyToId])
   @@index([channelId, createdAt(sort: Desc)])
   @@index([channelId, deleted, createdAt(sort: Desc)])
+}
+
+model TeamPulse {
+  id          String       @id @default(uuid())
+  serverId    String
+  channelId   String
+  profileId   String
+  pulseDate   DateTime     @db.Date
+  done        String       @db.Text
+  next        String       @db.Text
+  blocked     String       @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  server      Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  actionItems ActionItem[]
+
+  @@unique([serverId, profileId, pulseDate])
+  @@index([serverId, pulseDate(sort: Desc)])
+  @@index([channelId, pulseDate(sort: Desc)])
 }
 
 model MessageReaction {
@@ -142,16 +166,16 @@ model Notification {
 }
 
 model Reminder {
-  id          String    @id @default(uuid())
+  id          String      @id @default(uuid())
   profileId   String
-  title       String    @db.VarChar(160)
+  title       String      @db.VarChar(160)
   dueAt       DateTime
-  link        String    @default("/") @db.VarChar(500)
+  link        String      @default("/") @db.VarChar(500)
   sentAt      DateTime?
   completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
   actionItem  ActionItem?
 
   @@index([profileId, dueAt])
@@ -163,6 +187,7 @@ model ActionItem {
   serverId           String
   channelId          String
   sourceMessageId    String?
+  sourcePulseId      String?
   createdByProfileId String
   assigneeProfileId  String?
   reminderId         String?          @unique
@@ -175,6 +200,7 @@ model ActionItem {
   server             Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
   channel            Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
   sourceMessage      Message?         @relation(fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  sourcePulse        TeamPulse?       @relation(fields: [sourcePulseId], references: [id], onDelete: SetNull)
   createdBy          Profile          @relation("ActionItemCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
   assignee           Profile?         @relation("ActionItemAssignee", fields: [assigneeProfileId], references: [id], onDelete: SetNull)
   reminder           Reminder?        @relation(fields: [reminderId], references: [id], onDelete: SetNull)
@@ -183,6 +209,7 @@ model ActionItem {
   @@index([channelId, createdAt(sort: Desc)])
   @@index([assigneeProfileId, status, dueAt])
   @@index([sourceMessageId])
+  @@index([sourcePulseId])
 }
 
 model PushSubscription {
