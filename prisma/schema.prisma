@@ -21,6 +21,8 @@ model Profile {
   updatedAt              DateTime          @updatedAt
   meetingDecisions       MeetingDecision[] @relation("DecisionAuthor")
   meetingActionsAssigned MeetingAction[]   @relation("ActionAssignee")
+  actionItemsCreated    ActionItem[]       @relation("ActionItemCreator")
+  actionItemsAssigned   ActionItem[]       @relation("ActionItemAssignee")
   servers                Server[]
   members                Member[]
   channels               Channel[]
@@ -40,6 +42,7 @@ model Server {
   profile    Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
   members    Member[]
   channels   Channel[]
+  actionItems ActionItem[]
 
   @@index([profileId])
 }
@@ -78,6 +81,7 @@ model Channel {
   server           Server            @relation(fields: [serverId], references: [id], onDelete: Cascade)
   messages         Message[]
   meetingWorkspace MeetingWorkspace?
+  actionItems      ActionItem[]
 
   @@index([profileId])
   @@index([serverId])
@@ -98,6 +102,7 @@ model Message {
   member    Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
   channel   Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
+  actionItems ActionItem[]
 
   @@index([channelId])
   @@index([memberId])
@@ -147,9 +152,37 @@ model Reminder {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  actionItem  ActionItem?
 
   @@index([profileId, dueAt])
   @@index([dueAt, sentAt, completedAt])
+}
+
+model ActionItem {
+  id                 String           @id @default(uuid())
+  serverId           String
+  channelId          String
+  sourceMessageId    String?
+  createdByProfileId String
+  assigneeProfileId  String?
+  reminderId         String?          @unique
+  title              String           @db.VarChar(240)
+  status             ActionItemStatus @default(OPEN)
+  dueAt              DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  server             Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel            Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sourceMessage      Message?         @relation(fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  createdBy          Profile          @relation("ActionItemCreator", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  assignee           Profile?         @relation("ActionItemAssignee", fields: [assigneeProfileId], references: [id], onDelete: SetNull)
+  reminder           Reminder?        @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([serverId, status, dueAt])
+  @@index([channelId, createdAt(sort: Desc)])
+  @@index([assigneeProfileId, status, dueAt])
+  @@index([sourceMessageId])
 }
 
 model PushSubscription {
@@ -281,4 +314,11 @@ enum MeetingMode {
   STANDUP
   FOCUS
   WORKSHOP
+}
+
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
 }

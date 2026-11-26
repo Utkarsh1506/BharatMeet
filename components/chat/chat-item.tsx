@@ -6,7 +6,7 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Check, Edit, FileIcon, Link2, Reply, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
+import { BellPlus, Check, Edit, FileIcon, Link2, Reply, ShieldAlert, ShieldCheck, Trash } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 import { useReplyStore } from "@/hooks/use-reply-store";
+import { openReminder } from "@/lib/reminder-events";
 
 interface ChatItemProps {
   id: string;
@@ -196,6 +197,20 @@ export const ChatItem = ({
     } catch (error) {
       console.error("[MESSAGE_LINK_COPY]", error);
     }
+  };
+
+  const scheduleFollowUp = () => {
+    const messageText = content.replace(/\s+/g, " ").trim();
+    const title = messageText
+      ? `Follow up: ${messageText}`.slice(0, 160)
+      : `Follow up with ${member.profile.name}`;
+    const url = new URL(window.location.href);
+    url.searchParams.set("message", id);
+
+    openReminder({
+      title,
+      link: `${url.pathname}${url.search}`,
+    });
   };
 
   return (
@@ -389,6 +404,18 @@ export const ChatItem = ({
               className="rounded-md p-1.5 text-muted-foreground transition hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Reply className="h-4 w-4" />
+            </button>
+          </ActionTooltip>
+        )}
+        {!deleted && (
+          <ActionTooltip label="Set a follow-up">
+            <button
+              type="button"
+              aria-label="Set a follow-up reminder for this message"
+              onClick={scheduleFollowUp}
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <BellPlus className="h-4 w-4" />
             </button>
           </ActionTooltip>
         )}

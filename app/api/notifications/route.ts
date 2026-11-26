@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { checkRateLimit, apiLimiter, getRateLimitHeaders } from "@/lib/rate-limit";
 import { apiLogger } from "@/lib/logger";
+import { deliverDueReminders } from "@/lib/deliver-due-reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,11 @@ export async function GET() {
         getRateLimitHeaders(rateLimitResult)
       );
     }
+
+    // Deliver overdue reminders in the foreground when QStash is not
+    // configured. The helper claims reminders atomically, so scheduled
+    // background delivery cannot produce duplicate in-app notifications.
+    await deliverDueReminders(profile.id);
 
     const notifications = await db.notification.findMany({
       where: {

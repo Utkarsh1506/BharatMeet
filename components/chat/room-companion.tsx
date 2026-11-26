@@ -3,9 +3,17 @@
 import { ArrowUpRight, CalendarClock, HelpCircle, Headphones, Plus, Sparkles, Users } from "lucide-react";
 import { MemberRole, Server } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { useModal } from "@/hooks/use-modal-store";
+import { openReminder } from "@/lib/reminder-events";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { OPEN_TEAM_PULSE_EVENT } from "@/lib/team-pulse-events";
+import { TeamCatchUp } from "@/components/chat/team-catch-up";
 
 type RoomMember = {
   id: string;
@@ -22,16 +30,76 @@ export const RoomCompanion = ({
   roomName,
   members,
   server,
+  channelId,
   voiceChannelId,
 }: {
   roomName: string;
   members: RoomMember[];
   server: Server;
+  channelId: string;
   voiceChannelId?: string;
 }) => {
   const { onOpen } = useModal();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [pulseOpen, setPulseOpen] = useState(false);
+  const [pulseDone, setPulseDone] = useState("");
+  const [pulseNext, setPulseNext] = useState("");
+  const [pulseBlocked, setPulseBlocked] = useState("");
+  const [pulseBusy, setPulseBusy] = useState(false);
+  const [pulseError, setPulseError] = useState("");
   const online = members.filter((member) => member.profile.presenceStatus === "online");
+
+  useEffect(() => {
+    const openPulse = () => {
+      setPulseError("");
+      setPulseOpen(true);
+    };
+    window.addEventListener(OPEN_TEAM_PULSE_EVENT, openPulse);
+    return () => window.removeEventListener(OPEN_TEAM_PULSE_EVENT, openPulse);
+  }, []);
+
+  const submitPulse = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!pulseDone.trim() && !pulseNext.trim() && !pulseBlocked.trim()) {
+      setPulseError("Add at least one update before sharing your pulse.");
+      return;
+    }
+
+    setPulseBusy(true);
+    setPulseError("");
+    const dateLabel = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(new Date());
+    const content = [
+      `TEAM PULSE · ${dateLabel}`,
+      `✅ Done: ${pulseDone.trim() || "—"}`,
+      `🎯 Next: ${pulseNext.trim() || "—"}`,
+      `🧱 Blocked: ${pulseBlocked.trim() || "None"}`,
+    ].join("\n");
+
+    try {
+      await axios.post(
+        `/api/messages?channelId=${encodeURIComponent(channelId)}&serverId=${encodeURIComponent(server.id)}`,
+        { content },
+      );
+      await queryClient.invalidateQueries({ queryKey: [`chat:${channelId}`], exact: true });
+      setPulseDone("");
+      setPulseNext("");
+      setPulseBlocked("");
+      setPulseOpen(false);
+    } catch (error) {
+      const responseData = axios.isAxiosError(error) ? error.response?.data : null;
+      const message = responseData && typeof responseData === "object"
+        ? (responseData as { error?: string | { message?: string } }).error
+        : null;
+      setPulseError(typeof message === "string" ? message : message?.message || "Could not share your update. Please try again.");
+    } finally {
+      setPulseBusy(false);
+    }
+  };
 
   return (
     <aside className="room-companion hidden h-full w-[276px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-border/70 px-4 py-5 xl:!flex">
@@ -95,6 +163,16 @@ export const RoomCompanion = ({
         <div className="section-kicker">Make it a moment</div>
         <button
           type="button"
+          onClick={() => { setPulseError(""); setPulseOpen(true); }}
+          className="mt-3 flex w-full items-center gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-2 text-left transition hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">Share a team pulse</span><span className="mt-0.5 block text-[10px] text-muted-foreground">Done · next · blockers</span></span>
+          <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+        <TeamCatchUp serverId={server.id} channelId={channelId} members={members} />
+        <button
+          type="button"
           onClick={() => voiceChannelId
             ? router.push(`/servers/${server.id}/channels/${voiceChannelId}`)
             : onOpen("createChannel", { channelType: "AUDIO" })}
@@ -104,15 +182,59 @@ export const RoomCompanion = ({
           <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">Start a huddle</span><span className="mt-0.5 block text-[10px] text-muted-foreground">{voiceChannelId ? "Join the team voice room" : "Create a voice room"}</span></span>
           <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
-        <div className="mt-2 flex items-center gap-3 rounded-xl p-2 text-left">
+        <button
+          type="button"
+          onClick={() => {
+            const url = new URL(window.location.href);
+            openReminder({
+              title: `Follow up in ${roomName}`.slice(0, 160),
+              link: `${url.pathname}${url.search}`,
+            });
+          }}
+          className="mt-2 flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-muted-foreground"><CalendarClock className="h-4 w-4" /></span>
-          <span className="min-w-0"><span className="block text-xs font-semibold">Keep the thread moving</span><span className="mt-0.5 block text-[10px] text-muted-foreground">Drop an update for later</span></span>
-        </div>
+          <span className="min-w-0"><span className="block text-xs font-semibold">Set a room follow-up</span><span className="mt-0.5 block text-[10px] text-muted-foreground">Get reminded to return here</span></span>
+          <ArrowUpRight className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        </button>
         <div className="mt-3 flex items-start gap-2 border-t border-border/60 pt-3 text-[10px] leading-4 text-muted-foreground">
           <HelpCircle className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
           Every room keeps its own context, so the right people can catch up at their pace.
         </div>
       </section>
+
+      <Dialog open={pulseOpen} onOpenChange={(nextOpen) => {
+        setPulseOpen(nextOpen);
+        if (!nextOpen) setPulseError("");
+      }}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.25rem)] max-w-lg overflow-y-auto rounded-2xl border-border bg-card text-card-foreground sm:w-full">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Share your team pulse</DialogTitle>
+            <DialogDescription>Keep everyone in sync without scheduling another call. Share only what is useful today.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitPulse} className="space-y-4">
+            <label className="block space-y-1.5 text-sm font-medium">
+              <span>What did you finish?</span>
+              <textarea value={pulseDone} onChange={(event) => setPulseDone(event.target.value)} maxLength={900} rows={3} placeholder="A win, decision, or piece of progress…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              <span>What are you focusing on next?</span>
+              <textarea value={pulseNext} onChange={(event) => setPulseNext(event.target.value)} maxLength={900} rows={3} placeholder="The next thing you want to move forward…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              <span>Anything blocking you?</span>
+              <textarea value={pulseBlocked} onChange={(event) => setPulseBlocked(event.target.value)} maxLength={900} rows={2} placeholder="Leave blank if nothing is blocked…" className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal leading-5 outline-none transition placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary" />
+            </label>
+            {pulseError && <p role="alert" className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{pulseError}</p>}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={pulseBusy} onClick={() => setPulseOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={pulseBusy || (!pulseDone.trim() && !pulseNext.trim() && !pulseBlocked.trim())}>
+                {pulseBusy ? "Sharing…" : "Share update"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 };

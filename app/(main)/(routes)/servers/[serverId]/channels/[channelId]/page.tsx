@@ -67,6 +67,7 @@ const ChannelIdPage = async ({ params: paramsPromise }: ChannelIdPageProps) => {
       <ChatHeader
         name={channel.name}
         serverId={channel.serverId}
+        channelId={channel.type === ChannelType.TEXT ? channel.id : undefined}
         type="channel"
       />
       {channel.type === ChannelType.TEXT && (
@@ -125,6 +126,7 @@ const ChannelIdPage = async ({ params: paramsPromise }: ChannelIdPageProps) => {
           roomName={channel.name}
           members={server.members}
           server={server}
+          channelId={channel.id}
           voiceChannelId={server.channels.find((room) => room.type === ChannelType.AUDIO)?.id}
         />
       )}

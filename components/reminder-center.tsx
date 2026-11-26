@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { OPEN_REMINDER_EVENT, type OpenReminderDetail } from "@/lib/reminder-events";
 
 interface ReminderItem {
   id: string;
@@ -43,6 +44,7 @@ export const ReminderCenter = () => {
   const [schedulerConfigured, setSchedulerConfigured] = useState(false);
   const [deliveryNote, setDeliveryNote] = useState("");
   const [title, setTitle] = useState("");
+  const [reminderLink, setReminderLink] = useState("");
   const [dueAt, setDueAt] = useState(() => localDateTimeValue(new Date(Date.now() + 60 * 60 * 1000)));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -77,6 +79,24 @@ export const ReminderCenter = () => {
     if (open) void refresh();
   }, [open]);
 
+  useEffect(() => {
+    const openFromMessage = (event: Event) => {
+      const detail = (event as CustomEvent<OpenReminderDetail>).detail;
+      const safeLink = detail?.link?.startsWith("/") && !detail.link.startsWith("//")
+        ? detail.link
+        : window.location.pathname;
+
+      setTitle((detail?.title || "").slice(0, 160));
+      setReminderLink(safeLink);
+      setDueAt(localDateTimeValue(new Date(Date.now() + 60 * 60 * 1000)));
+      setDeliveryNote("");
+      setOpen(true);
+    };
+
+    window.addEventListener(OPEN_REMINDER_EVENT, openFromMessage);
+    return () => window.removeEventListener(OPEN_REMINDER_EVENT, openFromMessage);
+  }, []);
+
   const createReminder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
@@ -85,14 +105,15 @@ export const ReminderCenter = () => {
       const response = await fetch("/api/reminders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, dueAt: new Date(dueAt).toISOString(), link: window.location.pathname }),
+        body: JSON.stringify({ title, dueAt: new Date(dueAt).toISOString(), link: reminderLink || window.location.pathname }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not save this reminder.");
       setTitle("");
+      setReminderLink("");
       setDeliveryNote(result.scheduledDelivery
-        ? "Reminder saved. Bharat Meet will alert you at the scheduled time."
-        : "Reminder saved. Keep Bharat Meet open for an alert, or configure QStash for background delivery.");
+        ? "Reminder saved. You’ll get an in-app alert, plus a device push if alerts are enabled."
+        : "Reminder saved. It will alert you while Bharat Meet is open. Enable device alerts for push; QStash enables delivery while the app is closed.");
       await refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save this reminder.");
@@ -194,7 +215,10 @@ export const ReminderCenter = () => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) setReminderLink("");
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="icon" aria-label="Reminders and alert settings" title="Reminders" className="h-11 w-11 shrink-0 rounded-xl border border-border bg-surface text-muted-foreground hover:border-primary/30 hover:text-foreground sm:h-10 sm:w-10">
           <AlarmClock className="h-[1.1rem] w-[1.1rem]" />
@@ -246,7 +270,7 @@ export const ReminderCenter = () => {
           </section>
           {error && <p role="alert" className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
           {deliveryNote && <p role="status" className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">{deliveryNote}</p>}
-          {(!pushStatus?.configured || !schedulerConfigured) && pushStatus && <p className="text-xs leading-5 text-muted-foreground">In-app reminders work now. Background alerts need QStash signing credentials; device push also needs VAPID keys.</p>}
+          {pushStatus && <p className="text-xs leading-5 text-muted-foreground">{schedulerConfigured ? "Scheduled delivery is enabled for reminders while the app is closed." : "Keep Bharat Meet open for in-app reminder delivery; background delivery while closed needs QStash."} {pushStatus.configured ? "Enable device alerts above to receive push notifications." : "Device push needs VAPID keys on the deployment."}</p>}
         </div>
       </DialogContent>
     </Dialog>
