@@ -1,3 +1,5 @@
+"use client";
+
 import { Hash, ListTodo, MessageCircle, Sparkles } from "lucide-react";
 
 import { MobileToggle } from "@/components/mobile-toggle";
