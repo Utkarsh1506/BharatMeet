@@ -1,11 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { reportClientError } from "@/lib/report-client-error";
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const pathname = usePathname();
+
   useEffect(() => {
-    console.error("[APP_RENDER_ERROR]", { message: error.message, digest: error.digest, stack: error.stack });
-  }, [error]);
+    reportClientError({
+      title: "Server-rendered screen failed",
+      message: error.message || "A server-rendered screen could not be loaded.",
+      details: [
+        `Route: ${pathname || "unknown"}`,
+        error.digest ? `Error digest: ${error.digest}` : "No error digest was returned.",
+        "The full exception is available in the matching Vercel Function Log under [NEXT_REQUEST_ERROR].",
+      ].join("\n"),
+    });
+  }, [error, pathname]);
 
   return (
     <main className="grid min-h-[70vh] place-items-center bg-background p-6 text-foreground">
