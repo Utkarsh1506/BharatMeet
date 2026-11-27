@@ -56,6 +56,7 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
   const [dueAt, setDueAt] = useState("");
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+  const [helpBusyPulseId, setHelpBusyPulseId] = useState("");
   const [appreciations, setAppreciations] = useState<Appreciation[]>([]);
   const [showAppreciationForm, setShowAppreciationForm] = useState(false);
   const [recipientProfileId, setRecipientProfileId] = useState("");
@@ -180,6 +181,34 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
     }
   };
 
+  const offerHelp = async (pulse: CatchUpData["pulses"][number], blocker: string) => {
+    if (!pulse.pulseId || !data?.currentProfileId) return;
+    setHelpBusyPulseId(pulse.id);
+    setError("");
+    try {
+      const title = `Help with blocker: ${blocker}`.slice(0, 240);
+      const response = await fetch("/api/action-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serverId,
+          channelId: pulse.channel.id,
+          sourcePulseId: pulse.pulseId,
+          title,
+          assigneeProfileId: data.currentProfileId,
+          helpForProfileId: pulse.member.profile.id,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error?.message || result?.error || "Could not send your offer to help.");
+      await loadCatchUp();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not send your offer to help.");
+    } finally {
+      setHelpBusyPulseId("");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) { setSourcePulse(null); setError(""); } }}>
       <DialogTrigger asChild>
@@ -247,7 +276,13 @@ export function TeamCatchUp({ serverId, channelId, members }: { serverId: string
             const hasBlocker = blocked && blocked !== "None" && blocked !== "—";
             return <article key={pulse.id} className={`rounded-xl border p-3 ${hasBlocker ? "border-amber-500/25 bg-amber-500/[0.04]" : "border-border/70 bg-background/40"}`}>
               <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold">{pulse.member.profile.name}<span className="ml-2 font-normal text-muted-foreground">#{pulse.channel.name} · {readableDate(pulse.createdAt)}</span></p><p className="mt-2 text-xs leading-5 text-muted-foreground"><span className="font-medium text-foreground">Done:</span> {done || "—"}<br /><span className="font-medium text-foreground">Next:</span> {next || "—"}<br /><span className={hasBlocker ? "font-medium text-amber-500" : "font-medium text-foreground"}>Blocked:</span> {blocked || "None"}</p></div>
-                <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 px-2.5 text-xs" disabled={!next || next === "—" || pulse.actionItems.some((item) => item.status !== "DONE")} onClick={() => startAction(pulse)}><ListTodo className="mr-1.5 h-3.5 w-3.5" /> Make action</Button>
+                <div className="flex shrink-0 flex-col gap-1.5">
+                  <Button type="button" variant="outline" size="sm" className="h-8 px-2.5 text-xs" disabled={!next || next === "—" || pulse.actionItems.some((item) => item.status !== "DONE" && item.title === next)} onClick={() => startAction(pulse)}><ListTodo className="mr-1.5 h-3.5 w-3.5" /> Make action</Button>
+                  {hasBlocker && pulse.pulseId && pulse.member.profile.id !== data?.currentProfileId && (() => {
+                    const offered = pulse.actionItems.some((item) => item.status !== "DONE" && item.title.startsWith("Help with blocker:"));
+                    return <Button type="button" variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-amber-500 hover:text-amber-400" disabled={offered || helpBusyPulseId === pulse.id} onClick={() => void offerHelp(pulse, blocked)}>{helpBusyPulseId === pulse.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Heart className="mr-1.5 h-3.5 w-3.5" />}{offered ? "Help offered" : "I can help"}</Button>;
+                  })()}
+                </div>
               </div>
               {pulse.actionItems.length > 0 && <p className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><Clock3 className="h-3 w-3" />{pulse.actionItems.length} linked follow-up{pulse.actionItems.length === 1 ? "" : "s"}</p>}
             </article>;

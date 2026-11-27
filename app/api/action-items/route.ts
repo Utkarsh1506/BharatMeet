@@ -1,6 +1,7 @@
 import { ActionItemStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { PushSubscription as WebPushSubscription } from "web-push";
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
@@ -8,6 +9,7 @@ import { ApiErrors, handleApiError } from "@/lib/api-error";
 import { apiLimiter, checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 import { apiLogger } from "@/lib/logger";
 import { reminderSchedulerConfigured, scheduleReminderDelivery } from "@/lib/reminder-scheduler";
+import { sendWebPush, webPushConfigured } from "@/lib/web-push";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +119,7 @@ const createActionSchema = z.object({
   sourcePulseId: uuid.nullable().optional(),
   title: z.string().trim().min(1).max(240),
   assigneeProfileId: uuid.nullable().optional(),
+  helpForProfileId: uuid.nullable().optional(),
   dueAt: z.string().datetime({ offset: true }).nullable().optional(),
 }).strict();
 
@@ -153,15 +156,34 @@ export async function POST(request: Request) {
       if (!sourceMessage) return ApiErrors.badRequest("The source update must belong to this room.");
     }
 
+    let sourcePulseProfileId: string | null = null;
     if (input.sourcePulseId) {
       const sourcePulse = await db.teamPulse.findFirst({
         where: { id: input.sourcePulseId, serverId: channel.serverId, channelId: channel.id },
-        select: { id: true },
+        select: { id: true, profileId: true },
       });
       if (!sourcePulse) return ApiErrors.badRequest("The source pulse must belong to this room.");
+      sourcePulseProfileId = sourcePulse.profileId;
+    }
+
+    if (input.helpForProfileId && (!input.sourcePulseId || input.helpForProfileId !== sourcePulseProfileId || input.helpForProfileId === profile.id)) {
+      return ApiErrors.badRequest("Help offers must be linked to another teammate’s blocker.");
     }
 
     const destinationProfileId = input.assigneeProfileId || profile.id;
+    if (input.helpForProfileId && destinationProfileId !== profile.id) return ApiErrors.badRequest("A help offer must be assigned to you.");
+    if (input.helpForProfileId) {
+      const existingOffer = await db.actionItem.findFirst({
+        where: {
+          serverId: channel.serverId,
+          sourcePulseId: input.sourcePulseId,
+          title: { startsWith: "Help with blocker:" },
+          status: { not: ActionItemStatus.DONE },
+        },
+        select: { id: true },
+      });
+      if (existingOffer) return ApiErrors.badRequest("You already have an open help offer for this blocker.");
+    }
     const roomLink = `/servers/${channel.serverId}/channels/${channel.id}`;
     const created = await db.$transaction(async (tx) => {
       const reminder = dueAt
@@ -201,8 +223,44 @@ export async function POST(request: Request) {
           },
         });
       }
+      if (input.helpForProfileId) {
+        await tx.notification.create({
+          data: {
+            profileId: input.helpForProfileId,
+            title: "A teammate offered to help",
+            content: `${profile.name} is ready to help: ${input.title}`,
+            link: roomLink,
+          },
+        });
+      }
       return actionItem;
     });
+
+    if (input.helpForProfileId && webPushConfigured) {
+      try {
+        const subscriptions = await db.pushSubscription.findMany({ where: { profileId: input.helpForProfileId } });
+        const results = await Promise.allSettled(subscriptions.map((subscription) => sendWebPush({
+          endpoint: subscription.endpoint,
+          keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+        } as WebPushSubscription, {
+          title: "A teammate offered to help",
+          body: `${profile.name} is ready to help with your blocker.`,
+          url: roomLink,
+          tag: `help-offer-${created.id}`,
+        })));
+        const expiredEndpoints = results.flatMap((result, index) => result.status === "rejected" && [404, 410].includes(result.reason?.statusCode)
+          ? [subscriptions[index].endpoint]
+          : []);
+        if (expiredEndpoints.length) await db.pushSubscription.deleteMany({ where: { endpoint: { in: expiredEndpoints } } });
+        results.forEach((result) => {
+          if (result.status === "rejected" && ![404, 410].includes(result.reason?.statusCode)) {
+            apiLogger.warn({ statusCode: result.reason?.statusCode, actionItemId: created.id }, "Help offer push delivery failed");
+          }
+        });
+      } catch (pushError) {
+        apiLogger.warn({ err: pushError, actionItemId: created.id }, "Help offer saved, but push delivery could not be checked");
+      }
+    }
 
     if (created.reminderId && dueAt && reminderSchedulerConfigured) {
       try {
